@@ -1,0 +1,229 @@
+﻿<html>
+<head>
+    <title>Gcode Controller</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic">
+
+</head>
+<body>
+    <div id="main">
+
+        <div v-if="!connected">
+            <h1>Connect to Device</h1>
+            <label for="input_port">Port: </label>
+            <input name="input_port" v-model="port">
+            <br />
+            <label for="input_baud_rate">Baud Rate: </label>
+            <input name="input_baud_rate" v-model="baudRate">
+            <br />
+            <button v-on:click="connect">Connect</button>
+        </div>
+
+        <div v-if="connected">
+            <h1>Device {{port}} @ {{baudRate}}</h1>
+            <details>
+                <summary>Send Command</summary>
+                <input placeholder="type command then enter" v-on:keyup.enter="sendCommand($event)">
+                <br />
+                <ul class="unstyle">
+                    <li v-for="item in log.slice().reverse()">
+                        <pre :title="item.command">{{ item.message }}</pre>
+                    </li>
+                </ul>
+            </details>
+            <details>
+                <summary>Jog</summary>
+                <table>
+                    <tr>
+                        <td></td>
+                        <td align="center"><button value="forward" v-on:click="jog($event)">Forward</button></td>
+                        <td></td>
+                        <td align="center"><button value="up" v-on:click="jog($event)">Up</button></td>
+                    </tr>
+                    <tr>
+                        <td align="center"><button value="left" v-on:click="jog($event)">Left</button></td>
+                        <td align="center">
+                            <input type="number" min="0" max="100" step="1" v-model="xyStep" class="jog-input" />
+                        </td>
+                        <td align="center"><button value="right" v-on:click="jog($event)">Right</button></td>
+                        <td align="center">
+                            <input type="number" min="0" max="20" step="0.1" v-model="zStep" class="jog-input" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td align="center"><button value="backward" v-on:click="jog($event)">Backward</button></td>
+                        <td></td>
+                        <td align="center"><button value="down" v-on:click="jog($event)">Down</button></td>
+                    </tr>
+                </table>
+            </details>
+
+            <details>
+                <summary>Files</summary>
+                <div v-if="job.status != 1">
+                    {{job.fileName}}
+                    <progress max="100" :value="job.percentage"> {{job.percentage}}% </progress>
+                    <button @click="stopJob">⏹</button>
+                </div>
+
+                <button @click="onPickFile">Upload</button>
+                <input type="file"
+                       style="display: none"
+                       ref="fileInput"
+                       @change="onFilePicked" />
+                <ul class="unstyle">
+                    <li v-for="file in files">
+                        {{file}}
+                        <button @click="deleteFile(file)">X</button>
+                        <button @click="startJob(file)">▶</button>
+                    </li>
+                </ul>
+            </details>
+        </div>
+    </div>
+    <script src="https://unpkg.com/vue"></script>
+    <script>
+        function getFetch(method, body) {
+            return {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: body
+            }
+        }
+
+
+        const app = new Vue({
+            el: '#main',
+            data: {
+                port: '',
+                baudRate: 115200,
+                connected: false,
+                log: [],
+                xyStep: 5,
+                zStep: 0.1,
+                files: [],
+                job: {
+                    fileName: "",
+                    percentage: 0,
+                    state: 1
+                }
+            },
+            async beforeMount() {
+                const response = await fetch('/api/serial', getFetch('GET', null));
+                const device = await response.json();
+                if (device && device.IsOpen) {
+                    this.port = device.Port;
+                    this.baudRate = device.BaudRate;
+                    this.connected = true;
+                }
+                await this.getFiles();
+                setInterval(this.statusPolling, 5000);
+            },
+            methods: {
+                connect: async function () {
+                    const response = await fetch('/api/serial', getFetch('POST', JSON.stringify({ BaudRate: this.baudRate, Port: this.port })));
+                    await response.text();
+                    this.connected = response.status === 200;
+                },
+                sendCommand: async function (e) {
+                    const command = e.target.value;
+                    e.target.value = '';
+                    const response = await fetch('/api/serial', getFetch('PUT', JSON.stringify({ Command: command })));
+                    const responseText = await response.text();
+                    this.log.push({ command: command, message: responseText });
+                    if (this.log.length > 10) {
+                        this.log.shift();
+                    }
+                },
+                startJob: async function (file) {
+                    const response = await fetch('/api/job', getFetch('POST', JSON.stringify({ Name: file })));
+                    await response.text();
+                },
+                stopJob: async function () {
+                    const response = await fetch('/api/job', getFetch('DELETE', null));
+                    await response.text();
+                },
+                deleteFile: async function (file) {
+                    const response = await fetch('/api/files', getFetch('DELETE', JSON.stringify({ Name: file })));
+                    await response.text();
+                    await this.getFiles();
+                },
+                jog: async function (e) {
+                    const buttonValue = e.target.value;
+                    let command = '';
+                    switch (buttonValue) {
+                        case 'backward':
+                            command = `Y-${this.xyStep}`;
+                            break;
+                        case 'forward':
+                            command = `Y-${this.xyStep}`;
+                            break;
+                        case 'left':
+                            command = `X-${this.xyStep}`;
+                            break;
+                        case 'right':
+                            command = `X${this.xyStep}`;
+                            break;
+                        case 'up':
+                            command = `Z${this.zStep}`;
+                            break;
+                        case 'down':
+                            command = `Z-${this.zStep}`;
+                            break;
+                        default:
+                        // code block
+                    }
+
+                    // TODO adding gcode in the ui seems like a bad idea
+                    if (command.length > 0) {
+                        const response = await fetch('/api/serial', getFetch('PUT',
+                            JSON.stringify({ Command: `G90 ${command}` }
+                            )));
+                        await response.text();
+                    }
+                },
+                onPickFile() {
+                    this.$refs.fileInput.click()
+                },
+                async onFilePicked(event) {
+                    //https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+
+                    const files = event.target.files
+                    const formData = new FormData();
+                    formData.append('gcode_file', files[0]);
+                    const response = await fetch('/api/files', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    await response.text();
+                    await this.getFiles();
+                },
+                async getFiles() {
+                    const filesResponse = await fetch('/api/files', getFetch('GET', null));
+                    const filesArray = await filesResponse.json();
+                    this.files.splice(0, this.files.length);
+                    this.files.push(...filesArray);
+                },
+                async statusPolling() {
+                    const response = await fetch('/api/job', getFetch('GET', null));
+                    const responseJson = await response.json();
+                    this.job.percentage = responseJson.Percentage;
+                    this.job.state = responseJson.State;
+                    this.job.fileName = responseJson.FileName;
+                }
+            }
+        })</script>
+    <style>
+        .unstyle {
+            list-style: none;
+        }
+
+        .jog-input {
+            width: 40px;
+        }
+    </style>
+</body>
+</html>
