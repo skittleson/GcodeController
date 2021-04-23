@@ -4,7 +4,10 @@ using GcodeController.web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Linq;
+using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace GcodeController {
@@ -15,7 +18,7 @@ namespace GcodeController {
     }
 
     public class EmbededWebServer : IEmbededWebServer {
-        private WebServer webServer;
+        private WebServer _server;
         private readonly ILogger<EmbededWebServer> _logger;
 
         public EmbededWebServer(ILoggerFactory loggerFactory) {
@@ -24,7 +27,7 @@ namespace GcodeController {
 
         public Task Start(ServiceProvider serviceProvider) {
             var assembly = Assembly.GetExecutingAssembly();
-            webServer = new WebServer(o => o
+            _server = new WebServer(o => o
                     .WithUrlPrefix("http://*:8081")
                     .WithMode(HttpListenerMode.EmbedIO))
                 .WithLocalSessionManager()
@@ -33,22 +36,31 @@ namespace GcodeController {
                     var resolvedSerialDevice = serviceProvider.GetService<ISerialDevice>();
                     var resolvedJobFileService = serviceProvider.GetService<IJobFileService>();
                     var resolvedJobRunnerService = serviceProvider.GetService<IJobRunnerService>();
-                    return new ApiController(resolvedLogger, resolvedSerialDevice, resolvedJobFileService, resolvedJobRunnerService);
+                    var controller = new ApiController(resolvedLogger, resolvedSerialDevice, resolvedJobFileService, resolvedJobRunnerService);
+                    return controller;
                 }
             )).WithEmbeddedResources("/", assembly, "GcodeController.web");
-            //.WithModule(new WebSocketChatModule("/chat"))
-            //.WithModule(new WebSocketTerminalModule("/terminal"))
-            //.WithStaticFolder("/", HtmlRootPath, true, m => m
-            //  .WithContentCaching(UseFileCache)) // Add static files after other modules to avoid conflicts
-            //.WithModule(new ActionModule("/", HttpVerbs.Any, ctx => ctx.SendDataAsync(new { Message = "Error" })));
+            var ipAddress = Dns.GetHostAddresses(Dns.GetHostName()).FirstOrDefault();
+            _logger.LogInformation($"Go to http://{ipAddress}/8081");
 
             // Listen for state changes.
-            webServer.StateChanged += (s, e) => _logger.LogInformation($"WebServer New State - {e.NewState}");
-            return webServer.RunAsync();
+            _server.StateChanged += (s, e) => _logger.LogInformation($"WebServer New State - {e.NewState}");
+            _server.HandleHttpException(async (context, exception) => {
+                context.Response.StatusCode = exception.StatusCode;
+                switch (exception.StatusCode) {
+                    case 404:
+                        await context.SendStringAsync("Not Found", "text/html", Encoding.UTF8);
+                        break;
+                    default:
+                        await HttpExceptionHandler.Default(context, exception);
+                        break;
+                }
+            });
+            return _server.RunAsync();
         }
 
         public void Dispose() {
-            webServer?.Dispose();
+            _server?.Dispose();
         }
     }
 }

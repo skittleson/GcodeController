@@ -65,6 +65,11 @@ namespace GcodeController {
         }
 
         public void PauseJob() {
+            if (State == JobStates.Pause) {
+                State = JobStates.Running;
+                _logger.LogInformation("Job Unpaused");
+                return;
+            }
             State = JobStates.Pause;
             _logger.LogInformation("Job Paused");
         }

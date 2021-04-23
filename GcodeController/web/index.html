@@ -2,89 +2,113 @@
 <head>
     <title>Gcode Controller</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic">
-
+    <link rel="stylesheet" href="/picnic.css">
 </head>
 <body>
-    <div id="main">
-
+    <main id="main" class="content">
+        <h1>Gcode Controller</h1>
         <div v-if="!connected">
-            <h1>Connect to Device</h1>
-            <label for="input_port">Port: </label>
-            <input name="input_port" v-model="port">
-            <br />
-            <label for="input_baud_rate">Baud Rate: </label>
-            <input name="input_baud_rate" v-model="baudRate">
-            <br />
-            <button v-on:click="connect">Connect</button>
+            <div class="third">
+                <h4 class="stack">Connect to Device</h4>
+                <input class="stack" v-model="port" placeholder="Port" />
+                <input class="stack" v-model="baudRate" placeholder="Baud Rate" />
+                <button v-on:click="connect" class="stack">Connect</button>
+            </div>
         </div>
 
         <div v-if="connected">
-            <h1>Device {{port}} @ {{baudRate}}</h1>
-            <details>
-                <summary>Send Command</summary>
-                <input placeholder="type command then enter" v-on:keyup.enter="sendCommand($event)">
-                <br />
-                <ul class="unstyle">
-                    <li v-for="item in log.slice().reverse()">
-                        <pre :title="item.command">{{ item.message }}</pre>
-                    </li>
-                </ul>
-            </details>
-            <details>
-                <summary>Jog</summary>
-                <table>
-                    <tr>
-                        <td></td>
-                        <td align="center"><button value="forward" v-on:click="jog($event)">Forward</button></td>
-                        <td></td>
-                        <td align="center"><button value="up" v-on:click="jog($event)">Up</button></td>
-                    </tr>
-                    <tr>
-                        <td align="center"><button value="left" v-on:click="jog($event)">Left</button></td>
-                        <td align="center">
-                            <input type="number" min="0" max="100" step="1" v-model="xyStep" class="jog-input" />
-                        </td>
-                        <td align="center"><button value="right" v-on:click="jog($event)">Right</button></td>
-                        <td align="center">
-                            <input type="number" min="0" max="20" step="0.1" v-model="zStep" class="jog-input" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td align="center"><button value="backward" v-on:click="jog($event)">Backward</button></td>
-                        <td></td>
-                        <td align="center"><button value="down" v-on:click="jog($event)">Down</button></td>
-                    </tr>
-                </table>
-            </details>
+            <article class="card">
+                <header>
+                    <h4>State</h4>
+                </header>
+                <section>
+                    Port: <b>{{port}}</b><br />
+                    Baud Rate: <b>{{baudRate}}</b><br />
+                    Machine State: <b>{{state}}</b><br />
+                    File: <b>{{job.fileName}}</b><br />
+                    <progress max="100" :value="job.percentage" /><span>{{job.percentage}}%</span> <br />
+                </section>
+                <footer>
+                    <button :disabled="!(job.state === 2 || job.state === 3)" title="Pause Job" @click="pauseJob">❚❚</button>
+                    <button :disabled="job.state !== 2" title="Stop Job" @click="stopJob">🛑</button>
+                </footer>
+            </article>
 
-            <details>
-                <summary>Files</summary>
-                <div v-if="job.status != 1">
-                    {{job.fileName}}
-                    <progress max="100" :value="job.percentage"> {{job.percentage}}% </progress>
-                    <button @click="stopJob">⏹</button>
-                </div>
+            <article class="card">
+                <section>
+                    <div class="tabs three">
+                        <input id='tab-1' type='radio' name='tabgroupB' checked />
+                        <label class="pseudo button toggle" for="tab-1">📁 Files</label>
+                        <input id='tab-2' type='radio' name='tabgroupB'>
+                        <label class="pseudo button toggle" for="tab-2">🏃‍ Jog</label>
+                        <input id='tab-3' type='radio' name='tabgroupB'>
+                        <label class="pseudo button toggle" for="tab-3">💻 Console</label>
+                        <div class="row">
 
-                <button @click="onPickFile">Upload</button>
-                <input type="file"
-                       style="display: none"
-                       ref="fileInput"
-                       @change="onFilePicked" />
-                <ul class="unstyle">
-                    <li v-for="file in files">
-                        {{file}}
-                        <button @click="deleteFile(file)">X</button>
-                        <button @click="startJob(file)">▶</button>
-                    </li>
-                </ul>
-            </details>
+                            <div>
+                                <button @click="onPickFile">Upload File</button>
+                                <input type="file"
+                                       style="display: none"
+                                       ref="fileInput"
+                                       @change="onFilePicked" />
+
+                                <table class="primary">
+                                    <tbody>
+                                        <tr v-for="file in files">
+                                            <td>
+                                                <button class="pseudo fileActionsButton" @click="deleteFile(file)" title="Delete file">x</button>
+                                                <button class="pseudo fileActionsButton" @click="startJob(file)" title="Start Job">▶</button>
+                                                {{file}}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div>
+
+                                <table>
+                                    <tr>
+                                        <td></td>
+                                        <td align="center"><button value="forward" v-on:click="jog($event)">Forward</button></td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center"><button value="left" v-on:click="jog($event)">Left</button></td>
+                                        <td align="center">
+                                            <input type="number" min="0" max="100" step="1" v-model="xyStep" class="jog-input" />
+                                        </td>
+                                        <td align="center"><button value="right" v-on:click="jog($event)">Right</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td></td>
+                                        <td align="center"><button value="backward" v-on:click="jog($event)">Backward</button></td>
+                                        <td></td>
+                                    </tr>
+                                </table>
+
+                                <input type="number" min="0.001" max="20" step="0.1" v-model="zStep" class="jog-input" />
+                                <button value="up" v-on:click="jog($event)">Up</button>
+                                <button value="down" v-on:click="jog($event)">Down</button>
+                            </div>
+
+                            <div>
+                                <textarea class="console" readonly="readonly" cols="340" wrap="off" :value="console"></textarea>
+                                <br />
+                                <input placeholder="command executes on enter" v-on:keyup.enter="sendCommand($event)" />
+                                <br />
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+            </article>
         </div>
-    </div>
-    <script src="https://unpkg.com/vue"></script>
+    </main>
+
+    <script src="/vue.js"></script>
     <script>
-        function getFetch(method, body) {
+        function fetchOptionsFactory(method, body = null) {
             return {
                 method: method,
                 headers: {
@@ -94,12 +118,19 @@
             }
         }
 
+        function wait(time) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve();
+                }, time);
+            });
+        }
 
         const app = new Vue({
             el: '#main',
             data: {
                 port: '',
-                baudRate: 115200,
+                baudRate: null,
                 connected: false,
                 log: [],
                 xyStep: 5,
@@ -108,48 +139,94 @@
                 job: {
                     fileName: "",
                     percentage: 0,
-                    state: 1
+                    state: 0
                 }
             },
             async beforeMount() {
-                const response = await fetch('/api/serial', getFetch('GET', null));
+                const response = await fetch('/api/serial', fetchOptionsFactory('GET'));
                 const device = await response.json();
                 if (device && device.IsOpen) {
                     this.port = device.Port;
                     this.baudRate = device.BaudRate;
                     this.connected = true;
+                } else {
+                    this.port = localStorage.getItem('port');
+                    this.baudRate = localStorage.getItem('baudRate');
                 }
                 await this.getFiles();
-                setInterval(this.statusPolling, 5000);
+                await this.statusPolling();
+            },
+            computed: {
+                state: function () {
+                    switch (this.job.state) {
+                        case 0:
+                            return 'Stopped';
+                        case 1:
+                            return 'Stopping';
+                        case 2:
+                            return 'Running';
+                        case 3:
+                            return 'Pause';
+                        case 4:
+                            return 'Complete';
+                        default:
+                            return 'Unknown';
+                    }
+                },
+                canControl: function () {
+                    return this.job.state === 0 || this.job.state === 4;
+                },
+                console: function () {
+                    return this.log.slice().reverse().map(e => {
+                        return `${e.timestamp} - ${e.message}\r\n`;
+                    });
+                }
             },
             methods: {
                 connect: async function () {
-                    const response = await fetch('/api/serial', getFetch('POST', JSON.stringify({ BaudRate: this.baudRate, Port: this.port })));
+                    const response = await fetch('/api/serial', fetchOptionsFactory('POST', JSON.stringify({ BaudRate: this.baudRate, Port: this.port })));
                     await response.text();
                     this.connected = response.status === 200;
+                    if (this.connected) {
+                        localStorage.setItem('port', this.port);
+                        localStorage.setItem('baudRate', this.baudRate);
+                    }
                 },
                 sendCommand: async function (e) {
                     const command = e.target.value;
                     e.target.value = '';
-                    const response = await fetch('/api/serial', getFetch('PUT', JSON.stringify({ Command: command })));
-                    const responseText = await response.text();
-                    this.log.push({ command: command, message: responseText });
+                    const response = await fetch('/api/serial', fetchOptionsFactory('PUT', JSON.stringify({ Command: command })));
+                    const json = await response.json();
+                    this.log.push({ command: json.Command, message: json.Message, timestamp: json.Timestamp });
                     if (this.log.length > 10) {
                         this.log.shift();
                     }
                 },
                 startJob: async function (file) {
-                    const response = await fetch('/api/job', getFetch('POST', JSON.stringify({ Name: file })));
+                    const response = await fetch('/api/job', fetchOptionsFactory('POST', JSON.stringify({ Name: file })));
                     await response.text();
+                    await wait(500);
+                    await this.statusPolling();
                 },
                 stopJob: async function () {
-                    const response = await fetch('/api/job', getFetch('DELETE', null));
+                    if (confirm(`Stop ${this.job.fileName}?`)) {
+                        this.job.status = 1;
+                        const response = await fetch('/api/job', fetchOptionsFactory('DELETE'));
+                        await response.text();
+                        await this.statusPolling();
+                    }
+                },
+                pauseJob: async function () {
+                    const response = await fetch('/api/job', fetchOptionsFactory('PUT'));
                     await response.text();
+                    await this.statusPolling();
                 },
                 deleteFile: async function (file) {
-                    const response = await fetch('/api/files', getFetch('DELETE', JSON.stringify({ Name: file })));
-                    await response.text();
-                    await this.getFiles();
+                    if (confirm(`Delete ${file}?`)) {
+                        const response = await fetch(`/api/files`, fetchOptionsFactory('DELETE', JSON.stringify({ Name: file })));
+                        await response.text();
+                        await this.getFiles();
+                    }
                 },
                 jog: async function (e) {
                     const buttonValue = e.target.value;
@@ -174,12 +251,11 @@
                             command = `Z-${this.zStep}`;
                             break;
                         default:
-                        // code block
                     }
 
                     // TODO adding gcode in the ui seems like a bad idea
                     if (command.length > 0) {
-                        const response = await fetch('/api/serial', getFetch('PUT',
+                        const response = await fetch('/api/serial', fetchOptionsFactory('PUT',
                             JSON.stringify({ Command: `G90 ${command}` }
                             )));
                         await response.text();
@@ -202,27 +278,54 @@
                     await this.getFiles();
                 },
                 async getFiles() {
-                    const filesResponse = await fetch('/api/files', getFetch('GET', null));
+                    const filesResponse = await fetch('/api/files', fetchOptionsFactory('GET'));
                     const filesArray = await filesResponse.json();
                     this.files.splice(0, this.files.length);
                     this.files.push(...filesArray);
                 },
                 async statusPolling() {
-                    const response = await fetch('/api/job', getFetch('GET', null));
+                    const response = await fetch(`/api/job?percentage=${this.job.percentage}`, fetchOptionsFactory('GET'));
                     const responseJson = await response.json();
                     this.job.percentage = responseJson.Percentage;
                     this.job.state = responseJson.State;
                     this.job.fileName = responseJson.FileName;
+
+                    //long polling for status if running.
+                    if (this.job.state === 2) {
+                        await this.statusPolling();
+                    }
                 }
             }
-        })</script>
+        });
+    </script>
     <style>
         .unstyle {
             list-style: none;
         }
 
         .jog-input {
-            width: 40px;
+            width: 60px;
+        }
+
+        main {
+            padding: 1%;
+            max-width: 800px;
+        }
+
+        .fileActionsButton {
+            padding: .2em;
+            margin: .2em;
+        }
+
+        .console {
+            resize: vertical;
+            width: 98%;
+            height: 318px;
+            padding: 5px;
+            overflow: auto;
+            background: #1f1f1f;
+            color: #65c115;
+            font-size: .7em;
         }
     </style>
 </body>

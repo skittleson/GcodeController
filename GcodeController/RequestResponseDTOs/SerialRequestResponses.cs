@@ -1,4 +1,6 @@
-﻿namespace GcodeController.RequestResponseDTOs {
+﻿using System;
+
+namespace GcodeController.RequestResponseDTOs {
 
     public class CreateNewSerialRequest {
 
@@ -21,6 +23,16 @@
     public class SendSerialRequest {
 
         public string Command {
+            get; set;
+        }
+    }
+
+    public class SendSerialResponse : SendSerialRequest {
+        public string Message {
+            get; set;
+        }
+
+        public DateTime Timestamp {
             get; set;
         }
     }

@@ -24,7 +24,7 @@ namespace GcodeController.web {
         }
 
         [Route(HttpVerbs.Get, "/ping")]
-        public async Task<string> TableTennisAsync() {
+        public async Task<string> GetPong() {
             await Task.Delay(500);
             return "pong";
         }
@@ -41,15 +41,20 @@ namespace GcodeController.web {
         [Route(HttpVerbs.Post, "/serial")]
         public async Task<bool> CreateSerialConnectionAsync() {
             var data = await HttpContext.GetRequestDataAsync<CreateNewSerialRequest>();
+
             return _serialDevice.Open(data.Port, data.BaudRate);
         }
 
         [Route(HttpVerbs.Put, "/serial")]
-        public async Task<string> SendSerialCommandsAsync() {
+        public async Task<SendSerialResponse> SendSerialCommandsAsync() {
             var data = await HttpContext.GetRequestDataAsync<SendSerialRequest>();
             var serialResponse = await _serialDevice.SendAsync(data.Command);
             _logger.LogInformation(serialResponse);
-            return serialResponse;
+            return new SendSerialResponse {
+                Command = data.Command,
+                Timestamp = DateTime.Now,
+                Message = serialResponse
+            };
         }
 
         [Route(HttpVerbs.Post, "/files")]
@@ -68,14 +73,14 @@ namespace GcodeController.web {
         [Route(HttpVerbs.Delete, "/files")]
         public async Task DeleteFile() {
             var data = await HttpContext.GetRequestDataAsync<DeleteFileRequest>();
-            if (data != null
-                && !string.IsNullOrEmpty(data.Name)) {
+            if (data is null || string.IsNullOrEmpty(data.Name)) {
+                throw new ArgumentNullException(nameof(data.Name));
+            }
 
-                // Cannot delete if job is currently using file
-                if (!(_jobRunnerService.FileName == data.Name
-                    && (_jobRunnerService.State == JobStates.Stop || _jobRunnerService.State == JobStates.Complete))) {
-                    _jobFileService.Delete(data.Name);
-                }
+            // Cannot delete if job is currently using file
+            if (!(_jobRunnerService.FileName == data.Name
+                && (_jobRunnerService.State == JobStates.Stop || _jobRunnerService.State == JobStates.Complete))) {
+                _jobFileService.Delete(data.Name);
             }
         }
 
@@ -87,17 +92,37 @@ namespace GcodeController.web {
         }
 
         [Route(HttpVerbs.Delete, "/job")]
-        public void StopJob() {
-            _jobRunnerService.StopJob();
-        }
+        public void StopJob() => _jobRunnerService.StopJob();
+
+        [Route(HttpVerbs.Put, "/job")]
+        public void PauseJob() => _jobRunnerService.PauseJob();
 
         [Route(HttpVerbs.Get, "/job")]
-        public JobStatusResponse GetJob() {
-            return new JobStatusResponse {
-                Percentage = _jobRunnerService.CompletePercentage,
-                State = _jobRunnerService.State,
-                FileName = _jobRunnerService.FileName
-            };
+        public async Task<JobStatusResponse> GetJob() {
+            var queryParams = HttpContext.GetRequestQueryData();
+
+            // long polling
+            if (int.TryParse(queryParams.Get("percentage"), out var clientLastPercentage)) {
+                var status = getJobStatus();
+                var timeout = 10;
+                while (status.Percentage <= clientLastPercentage
+                    && status.State == JobStates.Running) {
+                    await Task.Delay(500);
+                    status = getJobStatus();
+                    if (timeout <= 0) { break; }
+                    timeout--;
+                }
+                return status;
+            } else {
+                return getJobStatus();
+            }
+            JobStatusResponse getJobStatus() {
+                return new JobStatusResponse {
+                    Percentage = _jobRunnerService.CompletePercentage,
+                    State = _jobRunnerService.State,
+                    FileName = _jobRunnerService.FileName
+                };
+            }
         }
     }
 
