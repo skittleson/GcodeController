@@ -102,15 +102,26 @@ namespace GcodeController {
                     while ((line = await reader.ReadLineAsync()) != null) {
                         line = line.Trim();
                         ++_linesAt;
-                        if (line.StartsWith("(") || line.StartsWith("%")) {
-                            continue;
-                        }
                         await _serialDevice.SendAsync(line);
                         if (State == JobStates.Pause) {
-                            await Task.Delay(100);
-                        } else if (State == JobStates.Stopping) {
+                            await _serialDevice.SendAsync("!"); // Pause
+                            while (State == JobStates.Pause) {
+                                await Task.Delay(1000);
+                            }
+                            await _serialDevice.SendAsync("~"); // Resume
+                        }
+                        if (State == JobStates.Stopping) {
                             State = JobStates.Stop;
                             break;
+                        }
+                    }
+
+                    // todo grbl defined properties would be better
+                    var hasStopped = true;
+                    while (hasStopped) {
+                        var statusResponse = await _serialDevice.SendAsync("?");
+                        if (!statusResponse.StartsWith("<Run")) {
+                            hasStopped = false;
                         }
                     }
                     State = JobStates.Complete;
@@ -124,7 +135,6 @@ namespace GcodeController {
 
         public void Dispose() {
             StopJob();
-            _backgroundProcessThread?.Abort();
         }
     }
 }

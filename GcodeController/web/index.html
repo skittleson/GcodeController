@@ -8,7 +8,7 @@
     <main id="main" class="content">
         <h1>Gcode Controller</h1>
         <div v-if="!connected">
-            <div class="third">
+            <div class="full third-600">
                 <h4 class="stack">Connect to Device</h4>
                 <input class="stack" v-model="port" placeholder="Port" />
                 <input class="stack" v-model="baudRate" placeholder="Baud Rate" />
@@ -20,6 +20,7 @@
             <article class="card">
                 <header>
                     <h4>State</h4>
+                    <a class="close" @click="disconnect()">&times;</a>
                 </header>
                 <section>
                     Port: <b>{{port}}</b><br />
@@ -94,9 +95,10 @@
 
                             <div>
                                 <textarea class="console" readonly="readonly" cols="340" wrap="off" :value="console"></textarea>
-                                <br />
-                                <input placeholder="command executes on enter" v-on:keyup.enter="sendCommand($event)" />
-                                <br />
+                                <div class="flex two" style="margin:1%;">
+                                    <input class="full three-fourth-800" placeholder="command executes on enter" v-on:keyup.enter="sendCommand($event)" />
+                                    <button class="full fourth-800 pseudo" @click="clearConsole()" style="margin:0;">Clear</button>
+                                </div>
                             </div>
 
                         </div>
@@ -191,6 +193,18 @@
                         localStorage.setItem('port', this.port);
                         localStorage.setItem('baudRate', this.baudRate);
                     }
+                },
+                disconnect: async function () {
+                    if (confirm(`Disconnect from ${this.port}?`)) {
+                        const response = await fetch('/api/serial', fetchOptionsFactory('DELETE'));
+                        await response.text();
+                        if (response.status === 200) {
+                            this.connected = false;
+                        }
+                    }
+                },
+                clearConsole: function () {
+                    this.log.splice(0, this.log.length)
                 },
                 sendCommand: async function (e) {
                     const command = e.target.value;
@@ -309,7 +323,7 @@
 
         main {
             padding: 1%;
-            max-width: 800px;
+            max-width: 1000px;
         }
 
         .fileActionsButton {
@@ -319,7 +333,7 @@
 
         .console {
             resize: vertical;
-            width: 98%;
+            width: 100%;
             height: 318px;
             padding: 5px;
             overflow: auto;

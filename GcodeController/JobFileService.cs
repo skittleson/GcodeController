@@ -2,6 +2,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace GcodeController {
 
@@ -9,7 +11,7 @@ namespace GcodeController {
 
         FileStream Get(string name);
 
-        void Save(Stream stream, string name);
+        Task SaveAsync(Stream stream, string name);
 
         void Delete(string name);
 
@@ -17,26 +19,47 @@ namespace GcodeController {
     }
 
     public class JobFileService : IJobFileService {
-        private readonly ILogger<JobFileService> _logger;
+        private readonly ILogger<IJobFileService> _logger;
         private readonly string _appPath;
 
         public JobFileService(ILoggerFactory loggerFactory) {
-            _logger = loggerFactory.CreateLogger<JobFileService>();
-            _appPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GcodeController");
+            _logger = loggerFactory.CreateLogger<IJobFileService>();
+            _appPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), nameof(GcodeController));
             if (!Directory.Exists(_appPath)) {
                 Directory.CreateDirectory(_appPath);
                 _logger.LogInformation($"Create Directory {_appPath}");
             }
         }
 
-        public void Save(Stream stream, string name) {
-            var newFile = Path.Combine(_appPath, name);
-            if (File.Exists(newFile)) {
-                File.Delete(newFile);
+        public async Task SaveAsync(Stream stream, string name) {
+            var destFileName = Path.Combine(_appPath, name);
+            if (File.Exists(destFileName)) {
+                File.Delete(destFileName);
             }
-            using var fs = new FileStream(newFile, FileMode.OpenOrCreate);
-            stream.CopyTo(fs);
-            fs.Flush();
+            using var rawFileStream = new FileStream(destFileName, FileMode.OpenOrCreate);
+            await stream.CopyToAsync(rawFileStream);
+            rawFileStream.Flush();
+            stream.Close();
+            rawFileStream.Position = 0;
+
+            // Reopen the file, strip comments, write to a temp file
+            using var rawFileReader = new StreamReader(rawFileStream);
+            using var transformFileStream = new FileStream($"{destFileName}.tmp", FileMode.OpenOrCreate);
+            string line;
+            while ((line = await rawFileReader.ReadLineAsync()) != null) {
+                line = line.Trim();
+
+                // Skip comments
+                if (line.StartsWith("(") || line.StartsWith("%") || line.StartsWith(";")) {
+                    continue;
+                }
+                var bytes = Encoding.UTF8.GetBytes(line + Environment.NewLine);
+                await transformFileStream.WriteAsync(bytes.AsMemory(0, bytes.Length));
+            }
+            transformFileStream.Close();
+            rawFileReader.Close();
+            File.Delete(destFileName);
+            File.Move(transformFileStream.Name, destFileName);
             _logger.LogInformation($"Created {name}");
         }
 

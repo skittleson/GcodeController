@@ -1,7 +1,7 @@
 ﻿<h1 align="center">Gcode Controller </h1>
 
 
-> Minimal Web UI for gcode to serial devices.<br /> `GcodeController` is a small app to manage your gcode jobs with the least amount of setup.  Use for Grbl, Marlin, and other firmware that accepts gcode.
+> Minimal Web UI for gcode to serial devices.<br /> `GcodeController` is a small app to manage your gcode jobs with the least amount of setup.  Use for Grbl, Marlin, RepRap and other firmware that accepts gcode.
 
 ✅ Minimal UI
 ✅ Start/Stop/Pause a job with realtime progress
@@ -20,7 +20,13 @@ coming soon.
 
 ## 🚀 Quick Start
 
-Make sure you have [dotnet](https://dotnet.microsoft.com/) install
+Download the latest release for your OS.  Run the executable. 
+
+```sh
+GcodeController
+```
+
+Then go to `http://<device ip>:8081`. It's shown in the console logs.
 
 <summary>
 	<details>Grant dialout access *nix based machine for non sudo users (Linux, Mac)</details>
@@ -35,21 +41,14 @@ Make sure you have [dotnet](https://dotnet.microsoft.com/) install
 	logout and login to ensure access is granted.
 </summary>
 
-Run the service!
-
-```sh
-gcodecontroller
-```
-
-Then go to `http://<device ip>:8081`. It's shown in the console logs.
-
 ## API Docs
 
 | **Endpoint**        | **Purpose**                          |
 | ------------------- | ------------------------------------ |
 | `GET /api/ping`     | Pong                                 |
 | `GET /api/serial`   | Current serial device connection     |
-| `POST /api/serial`  | Create serial device connection      |
+| `POST /api/serial`  | Create and open serial device connection      |
+| `DELETE /api/serial`| Close serial device connection      |
 | `PUT /api/serial`   | Send command to serial device        |
 | `GET /api/job`      | Job Status                           |
 | `POST /api/job`     | Start job                            |
@@ -77,7 +76,7 @@ Feel free to check [issues page](https://github.com/skittleson/GcodeController/i
 
 ⭐️ this repository if this project helped you! It motivates us a lot! 👋
 
-Buy me a coffee: <a href="https://www.buymeacoffee.com/skittles">skittles</a><br />
+Buy me a coffee ☕: <a href="https://www.buymeacoffee.com/skittles">skittles</a><br />
 
 ## Built with ♥
 

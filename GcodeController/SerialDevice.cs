@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using RJCP.IO.Ports;
 using System;
+using System.IO.Ports;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,7 +8,7 @@ namespace GcodeController {
 
     public interface ISerialDevice {
 
-        bool Open(string port, int baudRate);
+        Task<bool> OpenAsync(string port, int baudRate);
 
         void Close();
 
@@ -31,7 +31,7 @@ namespace GcodeController {
     /// SRP: Maintain serial communications
     /// </summary>
     public class SerialDevice : ISerialDevice, IDisposable {
-        private SerialPortStream _serialPort;
+        private SerialPort _serialPort;
         private readonly ILogger<SerialDevice> _logger;
         public string PortName => _serialPort?.PortName;
         public int BaudRate => _serialPort?.BaudRate ?? 0;
@@ -45,11 +45,12 @@ namespace GcodeController {
             Dispose();
         }
 
-        public bool Open(string port, int baudRate) {
+        public async Task<bool> OpenAsync(string port, int baudRate) {
             _serialPort?.Close();
-            _serialPort = new SerialPortStream(port, baudRate);
+            _serialPort = new SerialPort(port, baudRate);
             try {
                 _serialPort.Open();
+                await Task.Delay(100);
 
                 // Wake up!
                 _serialPort.WriteLine("\r\n\r\n");
@@ -58,7 +59,7 @@ namespace GcodeController {
                 _logger.LogWarning($"Unable to open port {port} @ {baudRate}");
                 return false;
             }
-            return _serialPort.IsOpen;
+            return _serialPort?.IsOpen ?? false;
         }
 
         public void Dispose() {
@@ -71,7 +72,7 @@ namespace GcodeController {
                 throw new Exception("Not Open");
             }
             var bytes = Encoding.UTF8.GetBytes(command + "\n");
-            await _serialPort.WriteAsync(bytes, 0, bytes.Length);
+            _serialPort.Write(bytes, 0, bytes.Length);
             var response = new StringBuilder();
             var counter = 0;
             for (var i = 0; i < 100; i++) {

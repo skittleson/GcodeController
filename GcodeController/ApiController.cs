@@ -5,7 +5,6 @@ using GcodeController.RequestResponseDTOs;
 using HttpMultipartParser;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace GcodeController.web {
@@ -41,8 +40,12 @@ namespace GcodeController.web {
         [Route(HttpVerbs.Post, "/serial")]
         public async Task<bool> CreateSerialConnectionAsync() {
             var data = await HttpContext.GetRequestDataAsync<CreateNewSerialRequest>();
+            return await _serialDevice.OpenAsync(data.Port, data.BaudRate);
+        }
 
-            return _serialDevice.Open(data.Port, data.BaudRate);
+        [Route(HttpVerbs.Delete, "/serial")]
+        public void KillSerialConnection() {
+            _serialDevice.Close();
         }
 
         [Route(HttpVerbs.Put, "/serial")]
@@ -60,11 +63,13 @@ namespace GcodeController.web {
         [Route(HttpVerbs.Post, "/files")]
         public async Task UploadFile() {
             var parser = await MultipartFormDataParser.ParseAsync(Request.InputStream);
-            var file = parser.Files.FirstOrDefault();
-            if (file is null) {
+            if (parser?.Files is null) {
                 throw new ArgumentNullException("No file uploaded");
             }
-            _jobFileService.Save(file.Data, file.FileName);
+            if (parser?.Files.Count != 1) {
+                throw new ArgumentOutOfRangeException("Only 1 file can be uploaded");
+            }
+            await _jobFileService.SaveAsync(parser.Files[0].Data, parser.Files[0].FileName);
         }
 
         [Route(HttpVerbs.Get, "/files")]
