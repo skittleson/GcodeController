@@ -4,12 +4,19 @@
 > Minimal Web UI for gcode to serial devices.<br /> `GcodeController` is a small app to manage your gcode jobs with the least amount of setup.  Use for Grbl, Marlin, RepRap and other firmware that accepts gcode.
 
 ✅ Minimal UI
+
 ✅ Start/Stop/Pause a job with realtime progress
+
 ✅ Jog
+
 ✅ Console to execute gcode
+
 ✅ Upload/Manage Files
+
 ✅ API First
+
 ✅ Detailed Logs
+
 ✅ Auto saving configuration
 
 ## ✨ Demo
