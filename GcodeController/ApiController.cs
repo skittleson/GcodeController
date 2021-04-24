@@ -5,6 +5,7 @@ using GcodeController.RequestResponseDTOs;
 using HttpMultipartParser;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace GcodeController.web {
@@ -20,6 +21,16 @@ namespace GcodeController.web {
             _serialDevice = serialDevice;
             _jobFileService = jobFileService;
             _jobRunnerService = jobRunnerService;
+
+        }
+
+        private async Task<KeyValuePair<Guid, string>> SerialResponseAsync(Guid id) {
+            var response = new KeyValuePair<Guid, string>();
+            while (response.Key != id) {
+                await _serialDevice.ResponseChannel.Reader.WaitToReadAsync();
+                response = await _serialDevice.ResponseChannel.Reader.ReadAsync();
+            }
+            return response;
         }
 
         [Route(HttpVerbs.Get, "/ping")]
@@ -51,12 +62,12 @@ namespace GcodeController.web {
         [Route(HttpVerbs.Put, "/serial")]
         public async Task<SendSerialResponse> SendSerialCommandsAsync() {
             var data = await HttpContext.GetRequestDataAsync<SendSerialRequest>();
-            var serialResponse = await _serialDevice.SendAsync(data.Command);
-            _logger.LogInformation(serialResponse);
+            var requestId = await _serialDevice.WriteAsync(data.Command);
+            var serialResponse = await SerialResponseAsync(requestId);
             return new SendSerialResponse {
                 Command = data.Command,
                 Timestamp = DateTime.Now,
-                Message = serialResponse
+                Message = serialResponse.Value
             };
         }
 

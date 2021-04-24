@@ -15,14 +15,14 @@
   <ItemGroup>
     <None Remove="libSystem.IO.Ports.Native.so" />
     <None Remove="web\index.html" />
-    <None Remove="web\picnic.css" />
-    <None Remove="web\vue.js" />
+    <None Remove="web\picnic.min.css" />
+    <None Remove="web\vue.min.js" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="web\index.html" />
-    <EmbeddedResource Include="web\picnic.css" />
-    <EmbeddedResource Include="web\vue.js" />
+    <EmbeddedResource Include="web\picnic.min.css" />
+    <EmbeddedResource Include="web\vue.min.js" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,5 +34,10 @@
     <PackageReference Include="Easy.Common" Version="3.8.5" />
     <PackageReference Include="System.IO.Ports" Version="5.0.1" />
   </ItemGroup>
+
+  <Target Name="GetJsDependencies" BeforeTargets="BeforeBuild">
+    <Copy SourceFiles="..\node_modules\picnic\picnic.min.css" DestinationFolder="web" />
+    <Copy SourceFiles="..\node_modules\vue\dist\vue.min.js" DestinationFolder="web" />
+  </Target>
 
 </Project>

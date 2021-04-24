@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace GcodeController {
@@ -42,7 +41,6 @@ namespace GcodeController {
         private FileStream _fileStream;
         private long _linesTotal;
         private long _linesAt;
-        private readonly Thread _backgroundProcessThread;
         public JobStates State {
             get; private set;
         }
@@ -60,8 +58,7 @@ namespace GcodeController {
             _serialDevice = serialDevice;
             _fileStream = null;
             State = JobStates.Stop;
-            _backgroundProcessThread = new Thread(async () => await Running()) { IsBackground = true };
-            _backgroundProcessThread.Start();
+            Background();
         }
 
         public void PauseJob() {
@@ -90,47 +87,47 @@ namespace GcodeController {
             State = JobStates.Stopping;
         }
 
-        private async Task Running() {
-
-            //  Background thread is always running
-            while (true) {
-                if (_fileStream != null) {
-                    _linesTotal = _fileStream.CountLines();
-                    _fileStream.Position = 0;
-                    using var reader = new StreamReader(_fileStream, Encoding.UTF8);
-                    string line;
-                    while ((line = await reader.ReadLineAsync()) != null) {
-                        line = line.Trim();
-                        ++_linesAt;
-                        await _serialDevice.SendAsync(line);
-                        if (State == JobStates.Pause) {
-                            await _serialDevice.SendAsync("!"); // Pause
-                            while (State == JobStates.Pause) {
-                                await Task.Delay(1000);
+        private void Background() {
+            Task.Run(async () => {
+                while (true) {
+                    if (_fileStream != null) {
+                        _linesTotal = _fileStream.CountLines();
+                        _fileStream.Position = 0;
+                        using var reader = new StreamReader(_fileStream, Encoding.UTF8);
+                        string line;
+                        while ((line = await reader.ReadLineAsync()) != null) {
+                            line = line.Trim();
+                            ++_linesAt;
+                            await _serialDevice.WriteAsync(line);
+                            if (State == JobStates.Pause) {
+                                await _serialDevice.WriteAsync("!");
+                                while (State == JobStates.Pause) {
+                                    await Task.Delay(1000);
+                                }
+                                await _serialDevice.WriteAsync("~");
                             }
-                            await _serialDevice.SendAsync("~"); // Resume
+                            if (State == JobStates.Stopping) {
+                                State = JobStates.Stop;
+                                break;
+                            }
                         }
-                        if (State == JobStates.Stopping) {
-                            State = JobStates.Stop;
-                            break;
-                        }
-                    }
 
-                    // todo grbl defined properties would be better
-                    var hasStopped = true;
-                    while (hasStopped) {
-                        var statusResponse = await _serialDevice.SendAsync("?");
-                        if (!statusResponse.StartsWith("<Run")) {
-                            hasStopped = false;
-                        }
+                        // todo grbl defined properties would be better
+                        //var hasStopped = true;
+                        //while (hasStopped) {
+                        //    var statusResponse = await _serialDevice.SendAsync("?");
+                        //    if (!statusResponse.StartsWith("<Run")) {
+                        //        hasStopped = false;
+                        //    }
+                        //}
+                        State = JobStates.Complete;
+                        _fileStream.Close();
+                        _logger.LogInformation($"Job Completed {Path.GetFileName(_fileStream.Name)}");
+                        _fileStream = null;
+                        await Task.Delay(500);
                     }
-                    State = JobStates.Complete;
-                    _fileStream.Close();
-                    _logger.LogInformation($"Job Completed {Path.GetFileName(_fileStream.Name)}");
-                    _fileStream = null;
-                    await Task.Delay(500);
                 }
-            }
+            });
         }
 
         public void Dispose() {
