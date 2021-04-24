@@ -39,11 +39,16 @@ Then go to `http://<device ip>:8081`. It's shown in the console logs.
 	<summary>Grant dialout access *nix based machine for non sudo users (Linux, Mac)</summary>
 	
 	Check user for dialout access
-	`id -Gn <username>`
+	
+```sh
+id -Gn <username>
+```
 
 	If missing  `dialout` from the list then
 
-	`sudo usermod -a -G dialout <username>`
+```sh
+sudo usermod -a -G dialout <username>
+```
 
 	logout and login to ensure access is granted.
 </details>
