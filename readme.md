@@ -35,8 +35,8 @@ GcodeController
 
 Then go to `http://<device ip>:8081`. It's shown in the console logs.
 
-<summary>
-	<details>Grant dialout access *nix based machine for non sudo users (Linux, Mac)</details>
+<details>
+	<summary>Grant dialout access *nix based machine for non sudo users (Linux, Mac)</summary>
 	
 	Check user for dialout access
 	`id -Gn <username>`
@@ -46,24 +46,24 @@ Then go to `http://<device ip>:8081`. It's shown in the console logs.
 	`sudo usermod -a -G dialout <username>`
 
 	logout and login to ensure access is granted.
-</summary>
+</details>
 
 ## API Docs
 
-| **Endpoint**        | **Purpose**                          |
-| ------------------- | ------------------------------------ |
-| `GET /api/ping`     | Pong                                 |
-| `GET /api/serial`   | Current serial device connection     |
-| `POST /api/serial`  | Create and open serial device connection      |
-| `DELETE /api/serial`| Close serial device connection      |
-| `PUT /api/serial`   | Send command to serial device        |
-| `GET /api/job`      | Job Status                           |
-| `POST /api/job`     | Start job                            |
-| `PUT /api/job`      | Pause job                            |
-| `DELETE /api/job`   | Stop  job                            |
-| `POST /api/files`   | Upload single file to be used in job |
-| `GET /api/files`    | Get all files                        |
-| `DELETE /api/files` | Remove single file                   |
+| **Endpoint**         | **Purpose**                              |
+| -------------------- | ---------------------------------------- |
+| `GET /api/ping`      | Pong                                     |
+| `GET /api/serial`    | Current serial device connection         |
+| `POST /api/serial`   | Create and open serial device connection |
+| `DELETE /api/serial` | Close serial device connection           |
+| `PUT /api/serial`    | Send command to serial device            |
+| `GET /api/job`       | Job Status                               |
+| `POST /api/job`      | Start job                                |
+| `PUT /api/job`       | Pause job                                |
+| `DELETE /api/job`    | Stop  job                                |
+| `POST /api/files`    | Upload single file to be used in job     |
+| `GET /api/files`     | Get all files                            |
+| `DELETE /api/files`  | Remove single file                       |
 
 ## 🤝 Contributing
 
@@ -87,10 +87,10 @@ Buy me a coffee ☕: <a href="https://www.buymeacoffee.com/skittles">skittles</a
 
 ## Built with ♥
 
-[VueJs](https://vuejs.org/)
-[EmbedIO](https://unosquare.github.io/embedio/)
-[Picnic CSS](https://picnicss.com/)
-[Grbl](https://github.com/grbl/grbl)
+- [VueJs](https://vuejs.org/)
+- [EmbedIO](https://unosquare.github.io/embedio/)
+- [Picnic CSS](https://picnicss.com/)
+- [Grbl](https://github.com/grbl/grbl)
 
 ## 📝 License
 
