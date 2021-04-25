@@ -16,12 +16,14 @@
   <ItemGroup>
     <None Remove="libSystem.IO.Ports.Native.so" />
     <None Remove="web\index.html" />
+    <None Remove="web\index.js" />
     <None Remove="web\picnic.min.css" />
     <None Remove="web\vue.min.js" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="web\index.html" />
+    <EmbeddedResource Include="web\index.js" />
     <EmbeddedResource Include="web\picnic.min.css" />
     <EmbeddedResource Include="web\vue.min.js" />
   </ItemGroup>
