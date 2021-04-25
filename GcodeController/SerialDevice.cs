@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using GcodeController.GcodeFirmwares;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
@@ -42,6 +43,8 @@ namespace GcodeController {
 
     public class SerialDevice : ISerialDevice, IDisposable {
         private SerialPort _serialPort;
+        private IGcodeFirmware _firmware;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<SerialDevice> _logger;
         public string PortName => _serialPort?.PortName;
         public int BaudRate => _serialPort?.BaudRate ?? 0;
@@ -55,6 +58,7 @@ namespace GcodeController {
         }
 
         public SerialDevice(ILoggerFactory loggerFactory) {
+            _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<SerialDevice>();
             RequestChannel = Channel.CreateBounded<KeyValuePair<Guid, string>>(1);
             ResponseChannel = Channel.CreateUnbounded<KeyValuePair<Guid, string>>();
@@ -82,6 +86,7 @@ namespace GcodeController {
 
                 // Wake up!
                 await WriteAsync("\n");
+                _firmware = new GrblFirmware(_loggerFactory);
                 _logger.LogInformation($"Connected {port} @ {baudRate}");
             } catch {
                 _logger.LogWarning($"Unable to open port {port} @ {baudRate}");
@@ -141,11 +146,7 @@ namespace GcodeController {
                 if (!string.IsNullOrEmpty(line)) {
                     response.AppendLine(line);
                 }
-                var error = line.StartsWith("error:", StringComparison.OrdinalIgnoreCase);
-                if (line.EndsWith("ok", StringComparison.OrdinalIgnoreCase) || error) {
-                    if (error) {
-                        _logger.LogWarning(line);
-                    }
+                if (_firmware.EndOfCommand(line)) {
                     break;
                 }
             }
