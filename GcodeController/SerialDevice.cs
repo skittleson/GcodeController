@@ -62,9 +62,11 @@ namespace GcodeController {
         }
 
         public void Close() {
-            _serialPort?.DiscardInBuffer();
-            _serialPort?.DiscardOutBuffer();
-            _serialPort?.Close();
+            if (_serialPort != null && _serialPort.IsOpen) {
+                _serialPort.DiscardInBuffer();
+                _serialPort.DiscardOutBuffer();
+                _serialPort.Close();
+            }
         }
 
         public string[] GetPorts() {
@@ -89,7 +91,7 @@ namespace GcodeController {
         }
 
         public void Dispose() {
-            _serialPort?.Close();
+            Close();
             _serialPort?.Dispose();
         }
 

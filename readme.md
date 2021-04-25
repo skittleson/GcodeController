@@ -21,9 +21,7 @@
 
 ## ✨ Demo
 
-coming soon.
-
-
+![Demo gif](demo.gif)
 
 ## 🚀 Quick Start
 
