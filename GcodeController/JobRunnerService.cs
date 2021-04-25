@@ -99,6 +99,7 @@ namespace GcodeController {
                             line = line.Trim();
                             ++_linesAt;
                             await _serialDevice.WriteAsync(line);
+                            await Task.Delay(500);
                             if (State == JobStates.Pause) {
                                 await _serialDevice.WriteAsync("!");
                                 while (State == JobStates.Pause) {

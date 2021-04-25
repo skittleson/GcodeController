@@ -10,8 +10,11 @@
         <div v-if="!connected">
             <div class="full third-600">
                 <h4 class="stack">Connect to Device</h4>
-                <input class="stack" v-model="port" placeholder="Port" />
+                <input class="stack" list="ports" v-model="port" placeholder="Port" />
                 <input class="stack" v-model="baudRate" placeholder="Baud Rate" />
+                <datalist id="ports">
+                    <option v-for="portName in ports">{{portName}}</option>
+                </datalist>
                 <button v-on:click="connect" class="stack">Connect</button>
             </div>
         </div>
@@ -91,6 +94,9 @@
                                 <input type="number" min="0.001" max="20" step="0.1" v-model="zStep" class="jog-input" />
                                 <button value="up" v-on:click="jog($event)">Up</button>
                                 <button value="down" v-on:click="jog($event)">Down</button>
+                                <br />
+                                <button v-on:click="setHome()">Set XYZ</button>
+                                <button v-on:click="goHome()">Home 🏠</button>
                             </div>
 
                             <div>
@@ -133,6 +139,7 @@
             el: '#main',
             data: {
                 port: '',
+                ports: [],
                 baudRate: null,
                 connected: false,
                 log: [],
@@ -147,17 +154,20 @@
             },
             async beforeMount() {
                 const response = await fetch('/api/serial', fetchOptionsFactory('GET'));
-                const device = await response.json();
-                if (device && device.IsOpen) {
-                    this.port = device.Port;
-                    this.baudRate = device.BaudRate;
-                    this.connected = true;
-                } else {
-                    this.port = localStorage.getItem('port');
-                    this.baudRate = localStorage.getItem('baudRate');
+                if (response.status === 200) {
+                    const device = await response.json();
+                    if (device && device.IsOpen) {
+                        this.port = device.Port;
+                        this.baudRate = device.BaudRate;
+                        this.connected = true;
+                    } else {
+                        this.ports = device.Ports;
+                        this.port = localStorage.getItem('port');
+                        this.baudRate = localStorage.getItem('baudRate');
+                    }
+                    await this.getFiles();
+                    await this.statusPolling();
                 }
-                await this.getFiles();
-                await this.statusPolling();
             },
             computed: {
                 state: function () {
@@ -188,9 +198,10 @@
             methods: {
                 connect: async function () {
                     const response = await fetch('/api/serial', fetchOptionsFactory('POST', JSON.stringify({ BaudRate: this.baudRate, Port: this.port })));
-                    await response.text();
+                    var result = await response.text();
                     this.connected = response.status === 200;
-                    if (this.connected) {
+                    console.log(result);
+                    if (this.connected && result) {
                         localStorage.setItem('port', this.port);
                         localStorage.setItem('baudRate', this.baudRate);
                     }
@@ -206,6 +217,24 @@
                 },
                 clearConsole: function () {
                     this.log.splice(0, this.log.length)
+                },
+                goHome: async function () {
+                    await this.sendCommand(
+                        {
+                            target: {
+                                value: 'G90 X0 Y0 Z0'
+                            }
+                        }
+                    );
+                },
+                setHome: async function () {
+                    await this.sendCommand(
+                        {
+                            target: {
+                                value: 'G92 X0 Y0 Z0'
+                            }
+                        }
+                    );
                 },
                 sendCommand: async function (e) {
                     const command = e.target.value;
@@ -251,7 +280,7 @@
                             command = `Y-${this.xyStep}`;
                             break;
                         case 'forward':
-                            command = `Y-${this.xyStep}`;
+                            command = `Y${this.xyStep}`;
                             break;
                         case 'left':
                             command = `X-${this.xyStep}`;

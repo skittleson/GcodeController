@@ -18,6 +18,10 @@ namespace GcodeController.RequestResponseDTOs {
         public bool IsOpen {
             get; set;
         }
+        public string[] Ports {
+            get;
+            internal set;
+        }
     }
 
     public class SendSerialRequest {

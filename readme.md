@@ -27,10 +27,12 @@ coming soon.
 
 ## 🚀 Quick Start
 
-Download the latest release for your OS.  Run the executable. 
+Download the latest release for your OS. Run the executable. 
 
+On Linux/Mac
 ```sh
-GcodeController
+chmod u+x GcodeController;
+./GcodeController
 ```
 
 Then go to `http://<device ip>:8081`. It's shown in the console logs.

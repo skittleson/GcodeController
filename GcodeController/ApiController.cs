@@ -5,7 +5,6 @@ using GcodeController.RequestResponseDTOs;
 using HttpMultipartParser;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace GcodeController.web {
@@ -24,15 +23,6 @@ namespace GcodeController.web {
 
         }
 
-        private async Task<KeyValuePair<Guid, string>> SerialResponseAsync(Guid id) {
-            var response = new KeyValuePair<Guid, string>();
-            while (response.Key != id) {
-                await _serialDevice.ResponseChannel.Reader.WaitToReadAsync();
-                response = await _serialDevice.ResponseChannel.Reader.ReadAsync();
-            }
-            return response;
-        }
-
         [Route(HttpVerbs.Get, "/ping")]
         public async Task<string> GetPong() {
             await Task.Delay(500);
@@ -44,7 +34,8 @@ namespace GcodeController.web {
             return new GetSerialResponse {
                 Port = _serialDevice.PortName,
                 BaudRate = _serialDevice.BaudRate,
-                IsOpen = _serialDevice.IsOpen
+                IsOpen = _serialDevice.IsOpen,
+                Ports = _serialDevice.GetPorts()
             };
         }
 
@@ -63,7 +54,7 @@ namespace GcodeController.web {
         public async Task<SendSerialResponse> SendSerialCommandsAsync() {
             var data = await HttpContext.GetRequestDataAsync<SendSerialRequest>();
             var requestId = await _serialDevice.WriteAsync(data.Command);
-            var serialResponse = await SerialResponseAsync(requestId);
+            var serialResponse = await _serialDevice.GetResponseAsync(requestId);
             return new SendSerialResponse {
                 Command = data.Command,
                 Timestamp = DateTime.Now,

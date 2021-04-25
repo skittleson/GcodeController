@@ -34,6 +34,10 @@ namespace GcodeController {
         Channel<KeyValuePair<Guid, string>> ResponseChannel {
             get;
         }
+
+        Task<KeyValuePair<Guid, string>> GetResponseAsync(Guid id);
+
+        string[] GetPorts();
     }
 
     public class SerialDevice : ISerialDevice, IDisposable {
@@ -58,19 +62,25 @@ namespace GcodeController {
         }
 
         public void Close() {
-            Dispose();
+            _serialPort?.DiscardInBuffer();
+            _serialPort?.DiscardOutBuffer();
+            _serialPort?.Close();
+        }
+
+        public string[] GetPorts() {
+            return SerialPort.GetPortNames();
         }
 
         public async Task<bool> OpenAsync(string port, int baudRate) {
-            _serialPort?.Close();
+            Close();
             _serialPort = new SerialPort(port, baudRate);
             try {
                 _serialPort.Open();
                 await Task.Delay(100);
 
                 // Wake up!
-                _serialPort.WriteLine("\r\n\r\n");
-                _logger.LogInformation("Connected");
+                await WriteAsync("\n");
+                _logger.LogInformation($"Connected {port} @ {baudRate}");
             } catch {
                 _logger.LogWarning($"Unable to open port {port} @ {baudRate}");
                 return false;
@@ -101,15 +111,28 @@ namespace GcodeController {
             return kv.Key;
         }
 
+        public async Task<KeyValuePair<Guid, string>> GetResponseAsync(Guid id) {
+            var response = new KeyValuePair<Guid, string>();
+            while (response.Key != id) {
+                await ResponseChannel.Reader.WaitToReadAsync();
+                response = await ResponseChannel.Reader.ReadAsync();
+            }
+            return response;
+        }
+
         public async Task<KeyValuePair<Guid, string>> ProcessCommand(KeyValuePair<Guid, string> idCommandKv) {
             if (!_serialPort.IsOpen) {
                 throw new Exception("Not Open");
             }
-            var bytes = Encoding.UTF8.GetBytes(idCommandKv.Value + "\n");
+            var command = idCommandKv.Value;
+            var bytes = Encoding.ASCII.GetBytes(command + "\n");
+            if (command.Equals("\\u0018")) {
+                bytes = Encoding.ASCII.GetBytes("\u0018"); //Ctrl+x to reset
+            }
             _serialPort.Write(bytes, 0, bytes.Length);
             var response = new StringBuilder();
             var counter = 0;
-            for (var i = 0; i < 100; i++) {
+            for (var i = 0; i < 50; i++) {
                 ++counter;
                 await Task.Delay(100);
                 var line = _serialPort.ReadExisting().Trim();
