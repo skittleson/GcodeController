@@ -1,15 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GcodeController.GcodeFirmwares {
     public class GrblFirmware : GcodeFirmwareBase {
         private ILogger<GrblFirmware> _logger;
 
-        public GrblFirmware(ILoggerFactory loggerFactory) {
+        public GrblFirmware(ILoggerFactory loggerFactory) : base() {
             _logger = loggerFactory.CreateLogger<GrblFirmware>();
         }
         public override bool EndOfCommand(string line) {
@@ -21,6 +17,12 @@ namespace GcodeController.GcodeFirmwares {
                 return true;
             }
             return false;
+        }
+
+        public override bool IsBusy(string data) {
+            var startIndex = data.IndexOf('<') + 1;
+            var firstCommandDelimitedIndex = data.IndexOf(',');
+            return data[startIndex..firstCommandDelimitedIndex].Equals("Run", StringComparison.OrdinalIgnoreCase);
         }
 
         public override void Stop() {

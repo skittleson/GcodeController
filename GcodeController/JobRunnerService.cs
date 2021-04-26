@@ -1,4 +1,5 @@
 ﻿using Easy.Common.Extensions;
+using GcodeController.GcodeFirmwares;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
@@ -35,6 +36,7 @@ namespace GcodeController {
     }
 
     public class JobRunnerService : IJobRunnerService, IDisposable {
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<JobRunnerService> _logger;
         private readonly IJobFileService _jobFileService;
         private readonly ISerialDevice _serialDevice;
@@ -53,6 +55,7 @@ namespace GcodeController {
         public string FileName => Path.GetFileName(_fileStream?.Name ?? "");
 
         public JobRunnerService(ILoggerFactory loggerFactory, IJobFileService jobFileService, ISerialDevice serialDevice) {
+            _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<JobRunnerService>();
             _jobFileService = jobFileService;
             _serialDevice = serialDevice;
@@ -93,34 +96,27 @@ namespace GcodeController {
                     if (_fileStream != null) {
                         _linesTotal = _fileStream.CountLines();
                         _fileStream.Position = 0;
-                        using var reader = new StreamReader(_fileStream, Encoding.UTF8);
+                        var firmware = new GrblFirmware(_loggerFactory);
+                        using var reader = new StreamReader(_fileStream, Encoding.ASCII);
                         string line;
                         while ((line = await reader.ReadLineAsync()) != null) {
                             line = line.Trim();
                             ++_linesAt;
                             await _serialDevice.WriteAsync(line);
-                            await Task.Delay(500);
+                            var running = true;
+                            while (running) {
+                                running = firmware.IsBusy(await _serialDevice.CommandResponseAsync("?"));
+                            }
                             if (State == JobStates.Pause) {
-                                await _serialDevice.WriteAsync("!");
                                 while (State == JobStates.Pause) {
                                     await Task.Delay(1000);
                                 }
-                                await _serialDevice.WriteAsync("~");
                             }
                             if (State == JobStates.Stopping) {
                                 State = JobStates.Stop;
                                 break;
                             }
                         }
-
-                        // todo grbl defined properties would be better
-                        //var hasStopped = true;
-                        //while (hasStopped) {
-                        //    var statusResponse = await _serialDevice.SendAsync("?");
-                        //    if (!statusResponse.StartsWith("<Run")) {
-                        //        hasStopped = false;
-                        //    }
-                        //}
                         State = JobStates.Complete;
                         _fileStream.Close();
                         _logger.LogInformation($"Job Completed {Path.GetFileName(_fileStream.Name)}");

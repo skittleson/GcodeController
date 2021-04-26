@@ -52,13 +52,12 @@ namespace GcodeController.web {
 
         [Route(HttpVerbs.Put, "/serial")]
         public async Task<SendSerialResponse> SendSerialCommandsAsync() {
-            var data = await HttpContext.GetRequestDataAsync<SendSerialRequest>();
-            var requestId = await _serialDevice.WriteAsync(data.Command);
-            var serialResponse = await _serialDevice.GetResponseAsync(requestId);
+            var request = await HttpContext.GetRequestDataAsync<SendSerialRequest>();
+            var response = await _serialDevice.CommandResponseAsync(request.Command);
             return new SendSerialResponse {
-                Command = data.Command,
+                Command = request.Command,
                 Timestamp = DateTime.Now,
-                Message = serialResponse.Value
+                Message = response
             };
         }
 

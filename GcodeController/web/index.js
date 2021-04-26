@@ -149,6 +149,7 @@ const app = new Vue({
         fetchOptionsFactory("POST", JSON.stringify({ Name: file }))
       );
       await response.text();
+      this.job.percentage = 0;
       await wait(500);
       await this.statusPolling();
     },

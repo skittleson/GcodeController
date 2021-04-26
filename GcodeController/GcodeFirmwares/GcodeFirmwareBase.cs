@@ -1,23 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace GcodeController.GcodeFirmwares {
+﻿namespace GcodeController.GcodeFirmwares {
 
     public interface IGcodeFirmware {
 
         bool EndOfCommand(string line);
         void Stop();
+
+        bool IsBusy(string data);
     }
 
-    public abstract class GcodeFirmwareBase {
+    public abstract class GcodeFirmwareBase : IGcodeFirmware {
 
         public abstract bool EndOfCommand(string line);
 
         public abstract void Stop();
 
+        public abstract bool IsBusy(string data);
         // TODO move direction and units
         // TODO pause
         // TODO resume

@@ -1,9 +1,11 @@
 ﻿using GcodeController.GcodeFirmwares;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Text;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -15,7 +17,7 @@ namespace GcodeController {
 
         void Close();
 
-        Task<Guid> WriteAsync(string command);
+        Task<Guid> WriteAsync(string command, bool responseRequired = false);
 
         string PortName {
             get;
@@ -32,11 +34,7 @@ namespace GcodeController {
             get;
         }
 
-        Channel<KeyValuePair<Guid, string>> ResponseChannel {
-            get;
-        }
-
-        Task<KeyValuePair<Guid, string>> GetResponseAsync(Guid id);
+        Task<string> CommandResponseAsync(string command);
 
         string[] GetPorts();
     }
@@ -52,16 +50,17 @@ namespace GcodeController {
         public Channel<KeyValuePair<Guid, string>> RequestChannel {
             get; private set;
         }
-
-        public Channel<KeyValuePair<Guid, string>> ResponseChannel {
-            get; private set;
+        public MemoryCache ResponseCache {
+            get;
         }
+
+        private Guid _statusId = new Guid("79bbad7a-3f92-4ea8-ad3a-84cfc4ce1d7a");
 
         public SerialDevice(ILoggerFactory loggerFactory) {
             _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<SerialDevice>();
             RequestChannel = Channel.CreateBounded<KeyValuePair<Guid, string>>(1);
-            ResponseChannel = Channel.CreateUnbounded<KeyValuePair<Guid, string>>();
+            ResponseCache = new MemoryCache(new MemoryCacheOptions());
             Background();
         }
 
@@ -105,26 +104,40 @@ namespace GcodeController {
                 while (true) {
                     while (await RequestChannel.Reader.WaitToReadAsync()) {
                         var kv = await RequestChannel.Reader.ReadAsync();
-                        await ResponseChannel.Writer.WriteAsync(await ProcessCommand(kv));
+                        var response = await ProcessCommand(kv);
+                        if (response.Key != Guid.Empty) {
+                            ResponseCache.Set(response.Key, response.Value, TimeSpan.FromSeconds(30));
+                        }
                     }
                     await Task.Delay(1000);
                 }
             });
         }
 
-        public async Task<Guid> WriteAsync(string command) {
-            var kv = new KeyValuePair<Guid, string>(Guid.NewGuid(), command);
+        public async Task<Guid> WriteAsync(string command, bool responseRequired = false) {
+            var id = responseRequired ? Guid.NewGuid() : Guid.Empty;
+
+            // special for certain commands to prevent calling too many times
+            if (command.Trim() == "?") {
+                id = _statusId;
+            }
+            var kv = new KeyValuePair<Guid, string>(id, command);
             await RequestChannel.Writer.WriteAsync(kv);
             return kv.Key;
         }
 
-        public async Task<KeyValuePair<Guid, string>> GetResponseAsync(Guid id) {
-            var response = new KeyValuePair<Guid, string>();
-            while (response.Key != id) {
-                await ResponseChannel.Reader.WaitToReadAsync();
-                response = await ResponseChannel.Reader.ReadAsync();
+        public async Task<string> CommandResponseAsync(string command) {
+            var id = await WriteAsync(command, true);
+            var ct = new CancellationTokenSource(1000).Token;
+            return await WaitForResponseAsync(id, ct);
+        }
+
+        private async Task<string> WaitForResponseAsync(Guid id, CancellationToken cancellationToken) {
+            if (ResponseCache.TryGetValue<string>(id, out var response)) {
+                return response;
             }
-            return response;
+            await Task.Delay(100, cancellationToken);
+            return await WaitForResponseAsync(id, cancellationToken);
         }
 
         public async Task<KeyValuePair<Guid, string>> ProcessCommand(KeyValuePair<Guid, string> idCommandKv) {
@@ -136,21 +149,8 @@ namespace GcodeController {
             if (command.Equals("\\u0018")) {
                 bytes = Encoding.ASCII.GetBytes("\u0018"); //Ctrl+x to reset
             }
-            _serialPort.Write(bytes, 0, bytes.Length);
-            var response = new StringBuilder();
-            var counter = 0;
-            for (var i = 0; i < 50; i++) {
-                ++counter;
-                await Task.Delay(100);
-                var line = _serialPort.ReadExisting().Trim();
-                if (!string.IsNullOrEmpty(line)) {
-                    response.AppendLine(line);
-                }
-                if (_firmware.EndOfCommand(line)) {
-                    break;
-                }
-            }
-            return new KeyValuePair<Guid, string>(idCommandKv.Key, response.ToString().Trim());
+            var result = await Utils.ReadUntilAsync(_serialPort.BaseStream, bytes);
+            return new KeyValuePair<Guid, string>(idCommandKv.Key, result);
         }
     }
 }

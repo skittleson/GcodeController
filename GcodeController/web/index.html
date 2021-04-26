@@ -11,10 +11,21 @@
             <div class="full third-600">
                 <h4 class="stack">Connect to Device</h4>
                 <input class="stack" list="ports" v-model="port" placeholder="Port" />
-                <input class="stack" v-model="baudRate" placeholder="Baud Rate" />
                 <datalist id="ports">
                     <option v-for="portName in ports">{{portName}}</option>
                 </datalist>
+                <input class="stack" list="buadrates" v-model="baudRate" placeholder="Baud Rate" />
+                <datalist id="baudrates">
+                    <option value="9600">
+                    <option value="14400">
+                    <option value="19200">
+                    <option value="38400">
+                    <option value="57600">
+                    <option value="115200">
+                    <option value="230400">
+                    <option value="460800">
+                </datalist>
+
                 <button v-on:click="connect" class="stack">Connect</button>
             </div>
         </div>
@@ -116,7 +127,7 @@
 
     <script src="/vue.min.js"></script>
     <script src="/index.js"></script>
-    
+
     <style>
         .unstyle {
             list-style: none;
