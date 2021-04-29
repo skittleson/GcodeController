@@ -1,7 +1,7 @@
 ﻿<h1 align="center">Gcode Controller </h1>
 
 
-> Minimal Web UI for gcode to serial devices.<br /> `GcodeController` is a small app to manage your gcode jobs with the least amount of setup.  Use for Grbl, Marlin, RepRap and other firmware that accepts gcode.
+> Minimal Web UI for gcode to serial devices.  `GcodeController` is a small app to manage your gcode jobs with the least amount of setup.  Use for Grbl, Marlin, RepRap and other firmware that accepts gcode.
 
 ✅ Minimal UI
 
@@ -15,9 +15,13 @@
 
 ✅ API First
 
+✅ MQTT / WebSocket Support with matching API responses
+
 ✅ Detailed Logs
 
 ✅ Auto saving configuration
+
+✅ OpenAPI
 
 ## ✨ Demo
 
@@ -55,20 +59,21 @@ sudo usermod -a -G dialout <username>
 
 ## API Docs
 
-| **Endpoint**         | **Purpose**                              |
-| -------------------- | ---------------------------------------- |
-| `GET /api/ping`      | Pong                                     |
-| `GET /api/serial`    | Current serial device connection         |
-| `POST /api/serial`   | Create and open serial device connection |
-| `DELETE /api/serial` | Close serial device connection           |
-| `PUT /api/serial`    | Send command to serial device            |
-| `GET /api/job`       | Job Status                               |
-| `POST /api/job`      | Start job                                |
-| `PUT /api/job`       | Pause job                                |
-| `DELETE /api/job`    | Stop  job                                |
-| `POST /api/files`    | Upload single file to be used in job     |
-| `GET /api/files`     | Get all files                            |
-| `DELETE /api/files`  | Remove single file                       |
+| **Endpoint**                   | **Purpose**                              |
+| ------------------------------ | ---------------------------------------- |
+| `GET /api/ping`                | Pong                                     |
+| `GET /api/serial`              | Current serial device connection         |
+| `POST /api/serial`             | Create and open serial device connection |
+| `DELETE /api/serial`           | Close serial device connection           |
+| `PUT /api/serial`              | Send command to serial device            |
+| `GET /api/job`                 | Job Status                               |
+| `POST /api/job`                | Start job                                |
+| `PUT /api/job`                 | Pause job                                |
+| `DELETE /api/job`              | Stop  job                                |
+| `POST /api/files`              | Upload single file to be used in job     |
+| `GET /api/files`               | Get all files                            |
+| `GET /api/files/{fileName}`    | Get single file information              |
+| `DELETE /api/files/{fileName}` | Remove single file                       |
 
 ## 🤝 Contributing
 

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace GcodeController {
 
-    public interface ISerialDevice {
+    public interface IDeviceService {
 
         Task<bool> OpenAsync(string port, int baudRate);
 
@@ -39,12 +39,12 @@ namespace GcodeController {
         string[] GetPorts();
     }
 
-    public class SerialDevice : ISerialDevice, IDisposable {
+    public class DeviceService : IDeviceService, IDisposable {
         private SerialPort _serialPort;
         private IGcodeFirmware _firmware;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly ILogger<SerialDevice> _logger;
-        public string PortName => _serialPort?.PortName;
+        private readonly ILogger<DeviceService> _logger;
+        public string PortName => _serialPort?.PortName ?? string.Empty;
         public int BaudRate => _serialPort?.BaudRate ?? 0;
         public bool IsOpen => _serialPort?.IsOpen ?? false;
         public Channel<KeyValuePair<Guid, string>> RequestChannel {
@@ -56,9 +56,9 @@ namespace GcodeController {
 
         private Guid _statusId = new Guid("79bbad7a-3f92-4ea8-ad3a-84cfc4ce1d7a");
 
-        public SerialDevice(ILoggerFactory loggerFactory) {
+        public DeviceService(ILoggerFactory loggerFactory) {
             _loggerFactory = loggerFactory;
-            _logger = loggerFactory.CreateLogger<SerialDevice>();
+            _logger = loggerFactory.CreateLogger<DeviceService>();
             RequestChannel = Channel.CreateBounded<KeyValuePair<Guid, string>>(1);
             ResponseCache = new MemoryCache(new MemoryCacheOptions());
             Background();
@@ -72,9 +72,7 @@ namespace GcodeController {
             }
         }
 
-        public string[] GetPorts() {
-            return SerialPort.GetPortNames();
-        }
+        public string[] GetPorts() => SerialPort.GetPortNames();
 
         public async Task<bool> OpenAsync(string port, int baudRate) {
             Close();

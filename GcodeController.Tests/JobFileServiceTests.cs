@@ -6,10 +6,10 @@ using Xunit;
 
 namespace GcodeController.Tests {
     public class JobFileServiceTests : IDisposable {
-        private IJobFileService _jobFileService;
+        private IFileService _jobFileService;
 
         public JobFileServiceTests() {
-            _jobFileService = new JobFileService(new NullLoggerFactory());
+            _jobFileService = new FileService(new NullLoggerFactory());
         }
 
         [Fact]

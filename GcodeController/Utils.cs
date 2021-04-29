@@ -1,7 +1,14 @@
-﻿using System;
+﻿using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,6 +39,50 @@ namespace GcodeController {
             await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), ct);
             var response = Encoding.ASCII.GetString(buffer);
             return response.Substring(0, response.IndexOf('\0')).Trim();
+        }
+
+        public static JsonSerializerOptions JsonOptions() {
+            var options = new JsonSerializerOptions();
+            options.Converters.Add(new JsonStringEnumConverter());
+            options.IgnoreNullValues = true;
+            options.DictionaryKeyPolicy = null;
+            options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            options.IgnoreReadOnlyProperties = false;
+            options.PropertyNameCaseInsensitive = true;
+            return options;
+        }
+
+        public static Dictionary<string, OpenApiSchema> CreateProperties<T>() {
+            var result = new Dictionary<string, OpenApiSchema>();
+            var props = typeof(T).GetProperties();
+            foreach (var prop in props) {
+                if (prop.GetAccessors().Any(x => x.IsStatic)) {
+                    continue;
+                }
+                var schema = new OpenApiSchema {
+                    Type = "object"
+                };
+                if (prop.PropertyType == typeof(string)) {
+                    var stringProperty = new OpenApiString("");
+                    schema.Type = stringProperty.PrimitiveType.ToString();
+                    schema.Default = stringProperty;
+                } else if (prop.PropertyType == typeof(bool)) {
+                    var boolJsonProperty = new OpenApiBoolean(false);
+                    schema.Type = boolJsonProperty.PrimitiveType.ToString();
+                    schema.Default = boolJsonProperty;
+                } else if (prop.PropertyType == typeof(int)) {
+                    var intPropertyType = new OpenApiInteger(0);
+                    schema.Type = intPropertyType.PrimitiveType.ToString();
+                    schema.Default = intPropertyType;
+                    schema.Format = "int32";
+                }
+                var descriptionAttribute = (prop.GetCustomAttributes(typeof(DescriptionAttribute), false).FirstOrDefault() as DescriptionAttribute);
+                if (descriptionAttribute != null) {
+                    schema.Description = descriptionAttribute.Description;
+                }
+                result.Add(prop.Name, schema);
+            }
+            return result;
         }
     }
 }

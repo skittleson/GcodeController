@@ -22,7 +22,7 @@ const app = new Vue({
   data: {
     port: "",
     ports: [],
-    baudRate: null,
+    baudRate: 0,
     connected: false,
     log: [],
     xyStep: 5,
@@ -31,50 +31,46 @@ const app = new Vue({
     job: {
       fileName: "",
       percentage: 0,
-      state: 0,
+      state: '-',
     },
+    socket: new WebSocket(`ws://127.0.0.1:8081/socket`)
   },
   async beforeMount() {
     const response = await fetch("/api/serial", fetchOptionsFactory("GET"));
-    if (response.status === 200) {
-      const device = await response.json();
-      if (device && device.IsOpen) {
-        this.port = device.Port;
-        this.baudRate = device.BaudRate;
-        this.connected = true;
-      } else {
-        this.ports = device.Ports;
+    if (response.status != 200) return;
+    const devices = await response.json();
+    if (devices) {
+      this.ports.splice(0, this.ports.length);
+      devices.map(device => {
+        if (device.IsOpen) {
+          this.port = device.Port;
+          this.baudRate = Number(device.BaudRate);
+          this.connected = true;
+        } else {
+          this.ports.push(device.Port);
+        }
+      });
+      if (this.port.length < 1) {
         this.port = localStorage.getItem("port");
-        this.baudRate = localStorage.getItem("baudRate");
+        this.baudRate = Number(localStorage.getItem("baudRate"));
       }
-      await this.getFiles();
-      await this.statusPolling();
     }
+    await this.getFiles();
+    const appBeforeMount = this;
+    this.socket.onmessage = function (event) {
+      const message = JSON.parse(event.data);
+      if (message.name === 'JobInfo') {
+        appBeforeMount.statusPolling(message.data);
+      }
+    };
+
   },
   computed: {
-    state: function () {
-      switch (this.job.state) {
-        case 0:
-          return "Stopped";
-        case 1:
-          return "Stopping";
-        case 2:
-          return "Running";
-        case 3:
-          return "Pause";
-        case 4:
-          return "Complete";
-        default:
-          return "Unknown";
-      }
-    },
     canControl: function () {
-      return this.job.state === 0 || this.job.state === 4;
+      return this.job.state === 'Stop' || this.job.state === 'Complete';
     },
     console: function () {
       return this.log
-        .slice()
-        .reverse()
         .map((e) => {
           return `${e.timestamp} - ${e.message}\r\n`;
         });
@@ -83,15 +79,14 @@ const app = new Vue({
   methods: {
     connect: async function () {
       const response = await fetch(
-        "/api/serial",
+        `/api/serial/${this.port}`,
         fetchOptionsFactory(
           "POST",
-          JSON.stringify({ BaudRate: this.baudRate, Port: this.port })
+          JSON.stringify({ baudRate: Number(this.baudRate), port: this.port })
         )
       );
       var result = await response.text();
       this.connected = response.status === 200;
-      console.log(result);
       if (this.connected && result) {
         localStorage.setItem("port", this.port);
         localStorage.setItem("baudRate", this.baudRate);
@@ -100,7 +95,7 @@ const app = new Vue({
     disconnect: async function () {
       if (confirm(`Disconnect from ${this.port}?`)) {
         const response = await fetch(
-          "/api/serial",
+          `/api/serial/${this.port}`,
           fetchOptionsFactory("DELETE")
         );
         await response.text();
@@ -130,48 +125,45 @@ const app = new Vue({
       const command = e.target.value;
       e.target.value = "";
       const response = await fetch(
-        "/api/serial",
-        fetchOptionsFactory("PUT", JSON.stringify({ Command: command }))
+        `/api/serial/${this.port}`,
+        fetchOptionsFactory("PUT", JSON.stringify({ command: command }))
       );
       const json = await response.json();
       this.log.push({
-        command: json.Command,
-        message: json.Message,
-        timestamp: json.Timestamp,
+        command: json.command,
+        message: json.message,
+        timestamp: json.timestamp,
       });
       if (this.log.length > 10) {
         this.log.shift();
       }
     },
     startJob: async function (file) {
-      const response = await fetch(
-        "/api/job",
-        fetchOptionsFactory("POST", JSON.stringify({ Name: file }))
-      );
-      await response.text();
-      this.job.percentage = 0;
-      await wait(500);
-      await this.statusPolling();
+      if (confirm(`Start ${file}?`)) {
+        const response = await fetch(
+          `/api/jobs/${file}`,
+          fetchOptionsFactory("POST")
+        );
+        if (response.status === 200) {
+          await response.text();
+          this.job.percentage = 0;
+        }
+      }
     },
     stopJob: async function () {
       if (confirm(`Stop ${this.job.fileName}?`)) {
         this.job.status = 1;
-        const response = await fetch("/api/job", fetchOptionsFactory("DELETE"));
+        const response = await fetch(`/api/jobs/${this.job.fileName}`, fetchOptionsFactory("DELETE"));
         await response.text();
-        await this.statusPolling();
       }
     },
     pauseJob: async function () {
-      const response = await fetch("/api/job", fetchOptionsFactory("PUT"));
+      const response = await fetch(`/api/jobs/${this.job.fileName}`, fetchOptionsFactory("PUT"));
       await response.text();
-      await this.statusPolling();
     },
     deleteFile: async function (file) {
       if (confirm(`Delete ${file}?`)) {
-        const response = await fetch(
-          `/api/files`,
-          fetchOptionsFactory("DELETE", JSON.stringify({ Name: file }))
-        );
+        const response = await fetch(`/api/jobs/${file}`, fetchOptionsFactory("DELETE"));
         await response.text();
         await this.getFiles();
       }
@@ -204,10 +196,10 @@ const app = new Vue({
       // TODO adding gcode in the ui seems like a bad idea
       if (command.length > 0) {
         const response = await fetch(
-          "/api/serial",
+          `/api/serial/${this.port}`,
           fetchOptionsFactory(
             "PUT",
-            JSON.stringify({ Command: `G91 ${command}` })
+            JSON.stringify({ command: `G91 ${command}` })
           )
         );
         await response.text();
@@ -230,28 +222,18 @@ const app = new Vue({
       await this.getFiles();
     },
     async getFiles() {
-      const filesResponse = await fetch(
+      const response = await fetch(
         "/api/files",
         fetchOptionsFactory("GET")
       );
-      const filesArray = await filesResponse.json();
+      const filesArray = await response.json();
       this.files.splice(0, this.files.length);
       this.files.push(...filesArray);
     },
-    async statusPolling() {
-      const response = await fetch(
-        `/api/job?percentage=${this.job.percentage}`,
-        fetchOptionsFactory("GET")
-      );
-      const responseJson = await response.json();
-      this.job.percentage = responseJson.Percentage;
-      this.job.state = responseJson.State;
-      this.job.fileName = responseJson.FileName;
-
-      //long polling for status if running.
-      if (this.job.state === 2) {
-        await this.statusPolling();
-      }
-    },
-  },
+    statusPolling(jobInfo) {
+      this.job.percentage = jobInfo.percentage;
+      this.job.state = jobInfo.state;
+      this.job.fileName = jobInfo.fileName;
+    }
+  }
 });

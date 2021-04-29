@@ -7,23 +7,23 @@ using System.Threading.Tasks;
 
 namespace GcodeController {
 
-    public interface IJobFileService {
+    public interface IFileService {
 
         FileStream Get(string name);
 
-        Task SaveAsync(Stream stream, string name);
+        Task<bool> SaveAsync(Stream stream, string name);
 
         void Delete(string name);
 
         string[] List();
     }
 
-    public class JobFileService : IJobFileService {
-        private readonly ILogger<IJobFileService> _logger;
+    public class FileService : IFileService {
+        private readonly ILogger<IFileService> _logger;
         private readonly string _appPath;
 
-        public JobFileService(ILoggerFactory loggerFactory) {
-            _logger = loggerFactory.CreateLogger<IJobFileService>();
+        public FileService(ILoggerFactory loggerFactory) {
+            _logger = loggerFactory.CreateLogger<IFileService>();
             _appPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), nameof(GcodeController));
             if (!Directory.Exists(_appPath)) {
                 Directory.CreateDirectory(_appPath);
@@ -31,7 +31,7 @@ namespace GcodeController {
             }
         }
 
-        public async Task SaveAsync(Stream stream, string name) {
+        public async Task<bool> SaveAsync(Stream stream, string name) {
             var destFileName = Path.Combine(_appPath, name);
             if (File.Exists(destFileName)) {
                 File.Delete(destFileName);
@@ -61,6 +61,7 @@ namespace GcodeController {
             File.Delete(destFileName);
             File.Move(transformFileStream.Name, destFileName);
             _logger.LogInformation($"Created {name}");
+            return File.Exists(destFileName);
         }
 
         public void Delete(string name) {

@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <None Remove="libSystem.IO.Ports.Native.so" />
+    <None Remove="web\doc.html" />
     <None Remove="web\index.html" />
     <None Remove="web\index.js" />
     <None Remove="web\picnic.min.css" />
@@ -22,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="web\doc.html" />
     <EmbeddedResource Include="web\index.html" />
     <EmbeddedResource Include="web\index.js" />
     <EmbeddedResource Include="web\picnic.min.css" />
@@ -30,12 +32,16 @@
 
   <ItemGroup>
     <PackageReference Include="EmbedIO" Version="3.4.3" />
+    <PackageReference Include="M2MqttDotnetCore" Version="1.1.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
     <PackageReference Include="HttpMultipartParser" Version="5.0.0" />
     <PackageReference Include="Easy.Common" Version="3.8.5" />
+    <PackageReference Include="Microsoft.OpenApi" Version="1.2.3" />
+    <PackageReference Include="Microsoft.OpenApi.Readers" Version="1.2.3" />
+    <PackageReference Include="PubSub" Version="4.0.1" />
     <PackageReference Include="System.IO.Ports" Version="5.0.1" />
   </ItemGroup>
 
