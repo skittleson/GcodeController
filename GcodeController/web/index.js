@@ -34,7 +34,7 @@ const app = new Vue({
       percentage: 0,
       state: '-',
     },
-    socket: new WebSocket(`ws://127.0.0.1:8081/socket`)
+    socket: new WebSocket(`ws://${new URL(window.location.href).host}/socket`)
   },
   async beforeMount() {
     const response = await fetch("/api/serial", fetchOptionsFactory("GET"));
@@ -43,12 +43,12 @@ const app = new Vue({
     if (devices) {
       this.ports.splice(0, this.ports.length);
       devices.map(device => {
-        if (device.IsOpen) {
-          this.port = device.Port;
-          this.baudRate = Number(device.BaudRate);
+        if (device.isOpen) {
+          this.port = device.port;
+          this.baudRate = Number(device.baudRate);
           this.connected = true;
         } else {
-          this.ports.push(device.Port);
+          this.ports.push(device.port);
         }
       });
       if (this.port.length < 1) {
@@ -80,7 +80,7 @@ const app = new Vue({
   methods: {
     connect: async function () {
       const response = await fetch(
-        `/api/serial/${this.port}`,
+        `/api/serial/${encodeURI(this.port)}`,
         fetchOptionsFactory(
           "POST",
           JSON.stringify({ baudRate: Number(this.baudRate), port: this.port })
@@ -96,7 +96,7 @@ const app = new Vue({
     disconnect: async function () {
       if (confirm(`Disconnect from ${this.port}?`)) {
         const response = await fetch(
-          `/api/serial/${this.port}`,
+          `/api/serial/${encodeURI(this.port)}`,
           fetchOptionsFactory("DELETE")
         );
         await response.text();
@@ -225,27 +225,27 @@ const app = new Vue({
   }
 });
 
-const btn = document.getElementById("toggleTheme");
-const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+// const btn = document.getElementById("toggleTheme");
+// const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 
-const currentTheme = localStorage.getItem("theme");
-if (currentTheme == "dark") {
-  document.body.classList.toggle("dark-theme");
-} else if (currentTheme == "light") {
-  document.body.classList.toggle("light-theme");
-}
+// const currentTheme = localStorage.getItem("theme");
+// if (currentTheme == "dark") {
+//   document.body.classList.toggle("dark-theme");
+// } else if (currentTheme == "light") {
+//   document.body.classList.toggle("light-theme");
+// }
 
-btn.addEventListener("click", function () {
-  if (prefersDarkScheme.matches) {
-    document.body.classList.toggle("light-theme");
-    var theme = document.body.classList.contains("light-theme")
-      ? "light"
-      : "dark";
-  } else {
-    document.body.classList.toggle("dark-theme");
-    var theme = document.body.classList.contains("dark-theme")
-      ? "dark"
-      : "light";
-  }
-  localStorage.setItem("theme", theme);
-});
+// btn.addEventListener("click", function () {
+//   if (prefersDarkScheme.matches) {
+//     document.body.classList.toggle("light-theme");
+//     var theme = document.body.classList.contains("light-theme")
+//       ? "light"
+//       : "dark";
+//   } else {
+//     document.body.classList.toggle("dark-theme");
+//     var theme = document.body.classList.contains("dark-theme")
+//       ? "dark"
+//       : "light";
+//   }
+//   localStorage.setItem("theme", theme);
+// });
