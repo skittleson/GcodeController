@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace GcodeController {
+namespace GcodeController.Services {
 
     public interface IDeviceService {
 
@@ -143,14 +143,14 @@ namespace GcodeController {
                 throw new Exception("Not Open");
             }
             var command = idCommandKv.Value;
-
-            var bytes = Encoding.ASCII.GetBytes(command + "\n");
+            var bytes = Encoding.UTF8.GetBytes(command + "\n");
             if (command.Equals("\\u0018")) {
-                bytes = Encoding.ASCII.GetBytes("\u0018"); //Ctrl+x to reset
+                bytes = Encoding.UTF8.GetBytes("\u0018"); //Ctrl+x to reset
             }
             string result;
+            var ct = new CancellationTokenSource(5000);
             try {
-                result = await Utils.ReadUntilAsync(_serialPort.BaseStream, bytes);
+                result = await Utils.ReadUntilAsync(_serialPort.BaseStream, bytes, ct);
             } catch (Exception ex) {
                 result = "error: failed to receive";
                 _logger.LogCritical(ex, "failed to get message from serial device");

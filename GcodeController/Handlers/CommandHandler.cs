@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using GcodeController.Services;
+using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 using System.Threading.Tasks;
 

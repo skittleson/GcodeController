@@ -32,13 +32,12 @@ namespace GcodeController {
             return standardOutput;
         }
 
-        public async static Task<string> ReadUntilAsync(Stream stream, byte[] write) {
+        public async static Task<string> ReadUntilAsync(Stream stream, byte[] write, CancellationTokenSource cancellationToken) {
             await stream.WriteAsync(write.AsMemory(0, write.Length));
             await Task.Delay(100);
             var buffer = new byte[4096];
-            var ct = new CancellationTokenSource(5000).Token;
-            await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), ct);
-            var response = Encoding.ASCII.GetString(buffer);
+            await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken.Token);
+            var response = Encoding.UTF8.GetString(buffer);
             return response.Substring(0, response.IndexOf('\0')).Trim();
         }
 
