@@ -112,9 +112,9 @@ const app = new Vue({
       await this.sendCommand("G90 X0 Y0 Z0");
     },
     setHome: async function () {
-      await this.sendCommand( "G92 X0 Y0 Z0");
+      await this.sendCommand("G92 X0 Y0 Z0");
     },
-    buttonSendCommand: async function(e){
+    buttonSendCommand: async function (e) {
       await this.sendCommand(e.target.value);
     },
     sendCommand: async function (command) {
@@ -122,7 +122,7 @@ const app = new Vue({
       const response = await fetch(
         `/api/cmnd`,
         fetchOptionsFactory("POST", JSON.stringify({ command: command, port: this.port }))
-      );      
+      );
       const message = await response.text();
       this.log.push({
         message: message.trim().trim('"'),

@@ -33,6 +33,7 @@ namespace GcodeController {
 
 
         protected async override Task OnClientConnectedAsync(IWebSocketContext context) {
+            await Task.Delay(1000);
             await SendAsync(context, new EventResponse<JobInfo>(_jobService.GetJobs()).ToString());
             await base.OnClientConnectedAsync(context);
         }
