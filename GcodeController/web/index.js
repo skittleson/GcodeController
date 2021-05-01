@@ -24,6 +24,7 @@ const app = new Vue({
     ports: [],
     baudRate: 0,
     connected: false,
+    commandHistory: [],
     log: [],
     xyStep: 5,
     zStep: 0.1,
@@ -108,31 +109,24 @@ const app = new Vue({
       this.log.splice(0, this.log.length);
     },
     goHome: async function () {
-      await this.sendCommand({
-        target: {
-          value: "G90 X0 Y0 Z0",
-        },
-      });
+      await this.sendCommand("G90 X0 Y0 Z0");
     },
     setHome: async function () {
-      await this.sendCommand({
-        target: {
-          value: "G92 X0 Y0 Z0",
-        },
-      });
+      await this.sendCommand( "G92 X0 Y0 Z0");
     },
-    sendCommand: async function (e) {
-      const command = e.target.value;
-      e.target.value = "";
+    buttonSendCommand: async function(e){
+      await this.sendCommand(e.target.value);
+    },
+    sendCommand: async function (command) {
+      this.commandHistory.push(command);
       const response = await fetch(
-        `/api/serial/${this.port}`,
-        fetchOptionsFactory("PUT", JSON.stringify({ command: command }))
-      );
-      const json = await response.json();
+        `/api/cmnd`,
+        fetchOptionsFactory("POST", JSON.stringify({ command: command, port: this.port }))
+      );      
+      const message = await response.text();
       this.log.push({
-        command: json.command,
-        message: json.message,
-        timestamp: json.timestamp,
+        message: message.trim().trim('"'),
+        timestamp: Date.now(),
       });
       if (this.log.length > 10) {
         this.log.shift();
@@ -195,14 +189,7 @@ const app = new Vue({
 
       // TODO adding gcode in the ui seems like a bad idea
       if (command.length > 0) {
-        const response = await fetch(
-          `/api/serial/${this.port}`,
-          fetchOptionsFactory(
-            "PUT",
-            JSON.stringify({ command: `G91 ${command}` })
-          )
-        );
-        await response.text();
+        await this.sendCommand(`G91 ${command}`);
       }
     },
     onPickFile() {
@@ -236,4 +223,29 @@ const app = new Vue({
       this.job.fileName = jobInfo.fileName;
     }
   }
+});
+
+const btn = document.getElementById("toggleTheme");
+const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+const currentTheme = localStorage.getItem("theme");
+if (currentTheme == "dark") {
+  document.body.classList.toggle("dark-theme");
+} else if (currentTheme == "light") {
+  document.body.classList.toggle("light-theme");
+}
+
+btn.addEventListener("click", function () {
+  if (prefersDarkScheme.matches) {
+    document.body.classList.toggle("light-theme");
+    var theme = document.body.classList.contains("light-theme")
+      ? "light"
+      : "dark";
+  } else {
+    document.body.classList.toggle("dark-theme");
+    var theme = document.body.classList.contains("dark-theme")
+      ? "dark"
+      : "light";
+  }
+  localStorage.setItem("theme", theme);
 });

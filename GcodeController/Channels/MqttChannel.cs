@@ -1,4 +1,5 @@
-﻿using GcodeController.Services;
+﻿using GcodeController.Handlers;
+using GcodeController.Services;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
@@ -35,7 +36,10 @@ namespace GcodeController.Channels {
 #pragma warning restore CS0618 // Type or member is obsolete
             _client.Connect(Guid.NewGuid().ToString());
             _client.MqttMsgPublishReceived += _client_MqttMsgPublishReceived;
-            _client.Subscribe(new[] { TopicFactory(JobService.PREFIX, true) }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
+            _client.Subscribe(new[] {
+                TopicFactory(JobService.PREFIX, true),
+                TopicFactory(CommandHandler.PREFIX, true) //TODO double command!
+            }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
         }
 
         private void _client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e) {

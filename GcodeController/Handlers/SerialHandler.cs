@@ -51,6 +51,7 @@ namespace GcodeController.Handlers {
     }
 
 
+    [Description("Request to create a serial connection.")]
     public class CreateNewSerialRequest {
 
         [Description("The port on the device. Usually COMX or ttyUSBX")]
@@ -63,17 +64,6 @@ namespace GcodeController.Handlers {
             get; set;
         }
 
-        public static OpenApiSchema Schema {
-            get {
-                var properties = Utils.CreateProperties<CreateNewSerialRequest>();
-                return new OpenApiSchema {
-                    Type = "object",
-                    Required = properties.Select(x => x.Key).ToHashSet(),
-                    Properties = properties
-                };
-            }
-        }
-
     }
 
     public class SerialResponse : CreateNewSerialRequest {
@@ -81,15 +71,6 @@ namespace GcodeController.Handlers {
         [Description("Returns if connection is connected")]
         public bool IsOpen {
             get; set;
-        }
-
-        public static new OpenApiSchema Schema {
-            get {
-                var schema = CreateNewSerialRequest.Schema;
-                schema.Required = new HashSet<string>();
-                schema.Properties = Utils.CreateProperties<SerialResponse>();
-                return schema;
-            }
         }
     }
 

@@ -101,6 +101,9 @@ Buy me a coffee ☕: <a href="https://www.buymeacoffee.com/skittles">skittles</a
 - [EmbedIO](https://unosquare.github.io/embedio/)
 - [Picnic CSS](https://picnicss.com/)
 - [Grbl](https://github.com/grbl/grbl)
+- [OpenAPI](https://www.openapis.org/)
+- [OpenAPI Generator](https://www.npmjs.com/package/openapi-generator)
+- [Dark Mode](https://css-tricks.com/a-complete-guide-to-dark-mode-on-the-web/)
 
 ## 📝 License
 

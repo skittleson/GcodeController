@@ -37,12 +37,10 @@ namespace GcodeController {
                 .WithLocalSessionManager()
                 .WithModule(new WebSocketModuleChannel("/socket", serviceProvider))
                 .WithWebApi($"/service", m => m.WithController(() => new OpenApiController()))
-                //.WithWebApi($"/api/{FilesHandler.PREFIX}", m => m.WithController(() => new FilesApiController(serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope())))
-                //.WithWebApi($"/api/{JobService.PREFIX}", m => m.WithController(() => new JobsApiController(serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope())))
-                //.WithWebApi($"/api/{SerialHandler.PREFIX}", m => m.WithController(() => new SerialApiController(serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope())))
                 .WithWebApi($"/api/{SerialHandler.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new SerialApiController(scopeFactory())))
                 .WithWebApi($"/api/{JobService.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new JobsApiController(scopeFactory())))
                 .WithWebApi($"/api/{FilesHandler.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new FilesApiController(scopeFactory())))
+                .WithWebApi($"/api/{CommandHandler.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new CommandApiController(scopeFactory())))
                 .WithEmbeddedResources("/", assembly, "GcodeController.web");
 
             var ipAddress = Dns.GetHostAddresses(Dns.GetHostName()).FirstOrDefault();

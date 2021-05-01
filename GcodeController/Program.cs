@@ -21,13 +21,14 @@ namespace GcodeController {
                .AddSingleton<IJobService, JobService>()
                .AddScoped<IFilesHandler, FilesHandler>()
                .AddScoped<ISerialHandler, SerialHandler>()
+               .AddScoped<ICommandHandler, CommandHandler>()
                .AddSingleton<IEventHubService>(new EventHubService(Hub.Default))
                .AddSingleton<MqttChannel>()
                .BuildServiceProvider();
             Console.CancelKeyPress += (s, e) => { serviceProvider.GetService<IDeviceService>().Close(); };
 
             // Move connect when on configuration mqtt ip address is added.
-            serviceProvider.GetService<MqttChannel>().Connect(System.Net.IPAddress.Parse("127.0.0.1"));
+            //serviceProvider.GetService<MqttChannel>().Connect(System.Net.IPAddress.Parse("127.0.0.1"));
 
             // This is blocking!  Use cancellation token to kill this
             serviceProvider.GetService<IEmbededWebServer>().Start(serviceProvider).GetAwaiter().GetResult();

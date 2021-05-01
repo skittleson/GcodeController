@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -52,9 +53,9 @@ namespace GcodeController {
             return options;
         }
 
-        public static Dictionary<string, OpenApiSchema> CreateProperties<T>() {
+        public static Dictionary<string, OpenApiSchema> CreateProperties(Type sourceType) {
             var result = new Dictionary<string, OpenApiSchema>();
-            var props = typeof(T).GetProperties();
+            var props = sourceType.GetProperties();
             foreach (var prop in props) {
                 if (prop.GetAccessors().Any(x => x.IsStatic)) {
                     continue;
@@ -74,15 +75,21 @@ namespace GcodeController {
                     var intPropertyType = new OpenApiInteger(0);
                     schema.Type = intPropertyType.PrimitiveType.ToString();
                     schema.Default = intPropertyType;
-                    schema.Format = "int32";
+                    schema.Format = "Int32";
                 }
-                var descriptionAttribute = (prop.GetCustomAttributes(typeof(DescriptionAttribute), false).FirstOrDefault() as DescriptionAttribute);
-                if (descriptionAttribute != null) {
-                    schema.Description = descriptionAttribute.Description;
-                }
+                schema.Description = GetAttributeValue<DescriptionAttribute>(prop.PropertyType)?.Description;
                 result.Add(prop.Name, schema);
             }
             return result;
+        }
+
+        public static T GetAttributeValue<T>(Type sourceType) {
+            var attribute = sourceType.GetCustomAttributes(typeof(T), false).FirstOrDefault();
+            return attribute is null ? default : (T)attribute;
+        }
+        public static T GetAttributeValue<T>(MethodInfo methodInfo) {
+            var attribute = methodInfo.GetCustomAttributes(typeof(T), false).FirstOrDefault();
+            return attribute is null ? default : (T)attribute;
         }
     }
 }

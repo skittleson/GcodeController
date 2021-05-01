@@ -1,12 +1,14 @@
 ﻿<html>
+
 <head>
     <title>Gcode Controller</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/picnic.min.css">
 </head>
+
 <body>
+    <!-- <button id='toggleTheme'>Toggle Theme</button> -->
     <main id="main" class="content">
-        <h1>Gcode Controller</h1>
         <div v-if="!connected">
             <div class="full third-600">
                 <h4 class="stack">Connect to Device</h4>
@@ -25,7 +27,6 @@
                     <option value="230400">
                     <option value="460800">
                 </datalist>
-
                 <button v-on:click="connect" class="stack">Connect</button>
             </div>
         </div>
@@ -41,10 +42,12 @@
                     Baud Rate: <b>{{baudRate}}</b><br />
                     Machine State: <b>{{job.state}}</b><br />
                     File: <b>{{job.fileName}}</b><br />
-                    <progress max="100" :value="job.percentage" /><span>{{job.percentage}}%</span> <br />
+                    Progress: <b>{{job.percentage}} %</b><br />
+                    <progress max="100" :value="job.percentage"><br />
                 </section>
                 <footer>
-                    <button :disabled="!(job.state === 'Running' || job.state === 'Pause')" title="Pause Job" @click="pauseJob">❚❚</button>
+                    <button :disabled="!(job.state === 'Running' || job.state === 'Pause')" title="Pause Job"
+                        @click="pauseJob">❚❚</button>
                     <button :disabled="job.state !== 'Running'" title="Stop Job" @click="stopJob">🛑</button>
                 </footer>
             </article>
@@ -59,20 +62,18 @@
                         <input id='tab-3' type='radio' name='tabgroupB'>
                         <label class="pseudo button toggle" for="tab-3">💻 Console</label>
                         <div class="row">
-
                             <div>
                                 <button @click="onPickFile">Upload File</button>
-                                <input type="file"
-                                       style="display: none"
-                                       ref="fileInput"
-                                       @change="onFilePicked" />
+                                <input type="file" style="display: none" ref="fileInput" @change="onFilePicked" />
 
                                 <table class="primary">
                                     <tbody>
                                         <tr v-for="file in files">
                                             <td>
-                                                <button class="pseudo fileActionsButton" @click="deleteFile(file)" title="Delete file">&times;</button>
-                                                <button class="pseudo fileActionsButton" @click="startJob(file)" title="Start Job">▶</button>
+                                                <button class="pseudo fileActionsButton" @click="deleteFile(file)"
+                                                    title="Delete file">&times;</button>
+                                                <button class="pseudo fileActionsButton" @click="startJob(file)"
+                                                    title="Start Job">▶</button>
                                                 {{file}}
                                             </td>
                                         </tr>
@@ -84,24 +85,30 @@
                                 <table>
                                     <tr>
                                         <td></td>
-                                        <td align="center"><button value="forward" v-on:click="jog($event)">Forward</button></td>
+                                        <td align="center"><button value="forward"
+                                                v-on:click="jog($event)">Forward</button></td>
                                         <td></td>
                                     </tr>
                                     <tr>
-                                        <td align="center"><button value="left" v-on:click="jog($event)">Left</button></td>
-                                        <td align="center">
-                                            <input type="number" min="0" max="100" step="1" v-model="xyStep" class="jog-input" />
+                                        <td align="center"><button value="left" v-on:click="jog($event)">Left</button>
                                         </td>
-                                        <td align="center"><button value="right" v-on:click="jog($event)">Right</button></td>
+                                        <td align="center">
+                                            <input type="number" min="0" max="100" step="1" v-model="xyStep"
+                                                class="jog-input" />
+                                        </td>
+                                        <td align="center"><button value="right" v-on:click="jog($event)">Right</button>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td></td>
-                                        <td align="center"><button value="backward" v-on:click="jog($event)">Backward</button></td>
+                                        <td align="center"><button value="backward"
+                                                v-on:click="jog($event)">Backward</button></td>
                                         <td></td>
                                     </tr>
                                 </table>
 
-                                <input type="number" min="0.001" max="20" step="0.1" v-model="zStep" class="jog-input" />
+                                <input type="number" min="0.001" max="20" step="0.1" v-model="zStep"
+                                    class="jog-input" />
                                 <button value="up" v-on:click="jog($event)">Up</button>
                                 <button value="down" v-on:click="jog($event)">Down</button>
                                 <br />
@@ -110,10 +117,17 @@
                             </div>
 
                             <div>
-                                <textarea class="console" readonly="readonly" cols="340" wrap="off" :value="console"></textarea>
+                                <textarea class="console" readonly="readonly" cols="340" wrap="off"
+                                    :value="console"></textarea>
                                 <div class="flex two" style="margin:1%;">
-                                    <input id="console-input" class="full three-fourth-800" placeholder="command executes on enter" v-on:keyup.enter="sendCommand($event)" />
-                                    <button class="full fourth-800 pseudo" @click="clearConsole()" style="margin:0;">Clear</button>
+                                    <input id="console-input" list="console-history" class="full three-fourth-800"
+                                        placeholder="command executes on enter"
+                                        v-on:keyup.enter="buttonSendCommand($event)" />
+                                    <datalist id="console-history">
+                                        <option v-for="command in commandHistory">{{command}}</option>
+                                    </datalist>
+                                    <button class="full fourth-800 pseudo" @click="clearConsole()"
+                                        style="margin:0;">Clear</button>
                                 </div>
                             </div>
 
@@ -156,6 +170,49 @@
             color: #65c115;
             font-size: .7em;
         }
+
+        progress[value] {
+            /* Reset the default appearance */
+            -webkit-appearance: none;
+            appearance: none;
+            min-width: 250px;
+            height: 20px;
+        }
+
+        body {
+        --text-color: #222;
+        --bkg-color: #fff;
+        }
+        body.dark-theme {
+        --text-color: #eee;
+        --bkg-color: #121212;
+        }
+
+        @media (prefers-color-scheme: dark) {
+        /* defaults to dark theme */
+        body {
+            --text-color: #eee;
+            --bkg-color: #121212;
+        }
+        body.light-theme {
+            --text-color: #222;
+            --bkg-color: #fff;
+        }
+        }
+
+        * {
+        font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+        background: var(--bkg-color);
+        }
+
+        h1,
+        p {
+        color: var(--text-color);
+        }
     </style>
 </body>
+
 </html>

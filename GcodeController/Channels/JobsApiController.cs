@@ -2,8 +2,11 @@
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace GcodeController.Channels {
+
+    [DisplayName(JobService.PREFIX)]
     public class JobsApiController : WebApiController {
         private IJobService _jobService;
 
@@ -11,12 +14,15 @@ namespace GcodeController.Channels {
             _jobService = scope.ServiceProvider.GetService<IJobService>();
         }
 
+        [Description("Pause all jobs")]
         [Route(HttpVerbs.Put, "/", true)]
         public JobInfo PauseJob() => _jobService.PauseJob();
 
+        [Description("Start a job by file name")]
         [Route(HttpVerbs.Post, "/{filename}", true)]
         public JobInfo Start(string filename) => _jobService.StartJob(filename);
 
+        [Description("Stop all jobs")]
         [Route(HttpVerbs.Delete, "/", true)]
         public JobInfo StopJob() => _jobService.StopJob();
     }
