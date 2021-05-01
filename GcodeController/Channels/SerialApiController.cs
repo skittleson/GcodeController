@@ -30,15 +30,14 @@ namespace GcodeController.Channels {
         public IEnumerable<SerialResponse> List() => _serialHandler.List();
 
         [Description("Open a connection to a serial device")]
-        [Route(HttpVerbs.Post, "/{port}", true)]
-        public async Task<bool> OpenAsync(string port, [JsonData] CreateNewSerialRequest createNewSerialRequest) {
+        [Route(HttpVerbs.Post, "/", true)]
+        public async Task<bool> OpenAsync([JsonData] CreateNewSerialRequest createNewSerialRequest) {
             if (createNewSerialRequest is null) {
                 throw HttpException.BadRequest("Request is empty");
             }
             if (createNewSerialRequest.BaudRate < 1) {
                 throw HttpException.BadRequest("Use a standard baud rate.");
             }
-            createNewSerialRequest.Port = port;
             return await _serialHandler.OpenAsync(createNewSerialRequest);
         }
     }

@@ -126,7 +126,7 @@ namespace GcodeController {
 
         public async Task<string> CommandResponseAsync(string command) {
             var id = await WriteAsync(command, true);
-            var ct = new CancellationTokenSource(1000).Token;
+            var ct = new CancellationTokenSource(5000).Token;
             return await WaitForResponseAsync(id, ct);
         }
 
@@ -143,11 +143,18 @@ namespace GcodeController {
                 throw new Exception("Not Open");
             }
             var command = idCommandKv.Value;
+
             var bytes = Encoding.ASCII.GetBytes(command + "\n");
             if (command.Equals("\\u0018")) {
                 bytes = Encoding.ASCII.GetBytes("\u0018"); //Ctrl+x to reset
             }
-            var result = await Utils.ReadUntilAsync(_serialPort.BaseStream, bytes);
+            string result;
+            try {
+                result = await Utils.ReadUntilAsync(_serialPort.BaseStream, bytes);
+            } catch (Exception ex) {
+                result = "error: failed to receive";
+                _logger.LogCritical(ex, "failed to get message from serial device");
+            }
             return new KeyValuePair<Guid, string>(idCommandKv.Key, result);
         }
     }

@@ -14,6 +14,10 @@ namespace GcodeController.Channels {
             _jobService = scope.ServiceProvider.GetService<IJobService>();
         }
 
+        [Description("Get jobs")]
+        [Route(HttpVerbs.Get, "/", true)]
+        public JobInfo GetJobs() => _jobService.GetJobs();
+
         [Description("Pause all jobs")]
         [Route(HttpVerbs.Put, "/", true)]
         public JobInfo PauseJob() => _jobService.PauseJob();

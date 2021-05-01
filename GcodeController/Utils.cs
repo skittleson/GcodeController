@@ -36,7 +36,7 @@ namespace GcodeController {
             await stream.WriteAsync(write.AsMemory(0, write.Length));
             await Task.Delay(100);
             var buffer = new byte[4096];
-            var ct = new CancellationTokenSource(1000).Token;
+            var ct = new CancellationTokenSource(5000).Token;
             await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), ct);
             var response = Encoding.ASCII.GetString(buffer);
             return response.Substring(0, response.IndexOf('\0')).Trim();

@@ -11,6 +11,8 @@ namespace GcodeController {
 
     public interface IJobService {
 
+        JobInfo GetJobs();
+
         JobInfo StartJob(string filename);
 
         JobInfo PauseJob();
@@ -151,5 +153,7 @@ namespace GcodeController {
         }
 
         public void Dispose() => StopJob();
+
+        public JobInfo GetJobs() => JobInfoFactory();
     }
 }
