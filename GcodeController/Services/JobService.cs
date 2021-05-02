@@ -126,10 +126,10 @@ namespace GcodeController {
                             ++_linesAt;
                             await _deviceService.WriteAsync(line);
                             while (firmware.IsBusy(await _deviceService.CommandResponseAsync("?"))) {
-                                await Task.Delay(1000);
+                                await Task.Delay(500);
                             }
                             while (State == JobStates.Pause) {
-                                await Task.Delay(1000);
+                                await Task.Delay(500);
                             }
                             if (State == JobStates.Stopping) {
                                 State = JobStates.Stop;

@@ -4,14 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace GcodeController {
     public static class Utils {
@@ -30,15 +26,6 @@ namespace GcodeController {
                 standardOutput += process.StandardOutput.ReadToEnd();
             }
             return standardOutput;
-        }
-
-        public async static Task<string> ReadUntilAsync(Stream stream, byte[] write, CancellationTokenSource cancellationToken) {
-            await stream.WriteAsync(write.AsMemory(0, write.Length));
-            await Task.Delay(100);
-            var buffer = new byte[4096];
-            await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken.Token);
-            var response = Encoding.UTF8.GetString(buffer);
-            return response.Substring(0, response.IndexOf('\0')).Trim();
         }
 
         public static JsonSerializerOptions JsonOptions() {

@@ -147,15 +147,21 @@ namespace GcodeController.Services {
             if (command.Equals("\\u0018")) {
                 bytes = Encoding.UTF8.GetBytes("\u0018"); //Ctrl+x to reset
             }
-            string result;
-            var ct = new CancellationTokenSource(5000);
+            var result = string.Empty;
+            var ct = new CancellationTokenSource(2000);
             try {
-                result = await Utils.ReadUntilAsync(_serialPort.BaseStream, bytes, ct);
+                await Task.Run(() => _serialPort.Write(bytes, 0, bytes.Length), ct.Token);
+                await Task.Run(() => result = _serialPort.ReadTo("\nok"), ct.Token);
+            } catch (TimeoutException _) {
+                _logger.LogWarning("command has timed out on: " + command);
             } catch (Exception ex) {
-                result = "error: failed to receive";
-                _logger.LogCritical(ex, "failed to get message from serial device");
+                try {
+                    result = _serialPort.ReadExisting();
+                } catch (Exception ex2) {
+                    _logger.LogCritical(ex2, "failed to get message from serial device");
+                }
             }
-            return new KeyValuePair<Guid, string>(idCommandKv.Key, result);
+            return new KeyValuePair<Guid, string>(idCommandKv.Key, result.Trim());
         }
     }
 }
