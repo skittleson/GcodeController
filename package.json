@@ -4,7 +4,8 @@
   "description": "Gcode Controller",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "g":"openapi-generator-cli generate -i schema.json -g javascript -o /test"
   },
   "repository": {
     "type": "git",

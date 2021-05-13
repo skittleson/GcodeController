@@ -78,6 +78,8 @@ namespace GcodeController.Services {
             Close();
             _serialPort = new SerialPort(port, baudRate);
             try {
+                _serialPort.ReadTimeout = 10000;
+                _serialPort.WriteTimeout = 10000;
                 _serialPort.Open();
                 await Task.Delay(100);
 
@@ -116,9 +118,9 @@ namespace GcodeController.Services {
             var id = responseRequired ? Guid.NewGuid() : Guid.Empty;
 
             // special for certain commands to prevent calling too many times
-            if (command.Trim() == "?") {
-                id = _statusId;
-            }
+            //if (command.Trim() == "?") {
+            //    id = _statusId;
+            //}
             var kv = new KeyValuePair<Guid, string>(id, command);
             await RequestChannel.Writer.WriteAsync(kv);
             return kv.Key;
@@ -134,7 +136,7 @@ namespace GcodeController.Services {
             if (ResponseCache.TryGetValue<string>(id, out var response)) {
                 return response;
             }
-            await Task.Delay(100, cancellationToken);
+            await Task.Delay(500, cancellationToken);
             return await WaitForResponseAsync(id, cancellationToken);
         }
 
@@ -150,16 +152,16 @@ namespace GcodeController.Services {
             var result = string.Empty;
             var ct = new CancellationTokenSource(2000);
             try {
-                await Task.Run(() => _serialPort.Write(bytes, 0, bytes.Length), ct.Token);
-                await Task.Run(() => result = _serialPort.ReadTo("\nok"), ct.Token);
-            } catch (TimeoutException _) {
+                await _serialPort.BaseStream.WriteAsync(bytes, 0, bytes.Length, ct.Token);
+
+                // This makes many assumptions BUT over requesting for data doesnt work either.
+                await Task.Delay(500);
+                await Task.Run(() => result = _serialPort.ReadExisting(), ct.Token);
+            } catch (TaskCanceledException _) {
                 _logger.LogWarning("command has timed out on: " + command);
             } catch (Exception ex) {
-                try {
-                    result = _serialPort.ReadExisting();
-                } catch (Exception ex2) {
-                    _logger.LogCritical(ex2, "failed to get message from serial device");
-                }
+                _logger.LogCritical(ex, "Unable to get a success resposne: ");
+
             }
             return new KeyValuePair<Guid, string>(idCommandKv.Key, result.Trim());
         }

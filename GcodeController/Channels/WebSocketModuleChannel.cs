@@ -7,13 +7,11 @@ using System.Threading.Tasks;
 
 namespace GcodeController {
     public class WebSocketModuleChannel : WebSocketModule {
-        private readonly IServiceProvider _serviceProvider;
         private readonly IJobService _jobService;
         private readonly IEventHubService _hubService;
 
         public WebSocketModuleChannel(string urlPath, IServiceProvider serviceProvider)
             : base(urlPath, true) {
-            _serviceProvider = serviceProvider;
             _jobService = serviceProvider.GetService<IJobService>();
             _hubService = serviceProvider.GetService<IEventHubService>();
             _hubService.Subscribe<JobInfo>(this, async jobInfo => {

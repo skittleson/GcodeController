@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GcodeController {
@@ -38,6 +39,9 @@ namespace GcodeController {
         public string FileName {
             get; set;
         }
+        public long Elapsed {
+            get; set;
+        }
     }
 
     public class JobService : IJobService, IDisposable {
@@ -54,12 +58,14 @@ namespace GcodeController {
         public const string PREFIX = "jobs";
 
         private readonly IEventHubService _hubService;
+        private readonly CancellationToken _cancellationToken;
 
         private JobInfo JobInfoFactory() {
             return new JobInfo() {
                 Percentage = CompletePercentage,
                 State = State,
-                FileName = FileName
+                FileName = FileName,
+                Elapsed = (long)((JobEnd ?? DateTime.UtcNow) - (JobStart ?? DateTime.UtcNow)).TotalSeconds
             };
         }
 
@@ -71,13 +77,17 @@ namespace GcodeController {
         }
         public string FileName => Path.GetFileName(_fileStream?.Name ?? "");
 
-        public JobService(ILoggerFactory loggerFactory, IFileService fileService, IDeviceService deviceService, IEventHubService hubService) {
+        public DateTime? JobStart;
+        public DateTime? JobEnd;
+
+        public JobService(ILoggerFactory loggerFactory, IFileService fileService, IDeviceService deviceService, IEventHubService hubService, CancellationToken cancellationToken) {
             _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<JobService>();
             _fileService = fileService;
             _deviceService = deviceService;
             _fileStream = null;
             _hubService = hubService;
+            _cancellationToken = cancellationToken;
             State = JobStates.Stop;
             Background();
         }
@@ -95,7 +105,7 @@ namespace GcodeController {
 
         public JobInfo StartJob(string filename) {
             if (_fileStream is null) {
-                _fileStream = _fileService.Get(filename);
+                _fileStream = _fileService.Get(filename).GetStream();
                 State = JobStates.Running;
                 _linesTotal = 0;
                 _linesAt = 0;
@@ -117,19 +127,29 @@ namespace GcodeController {
                     if (_fileStream != null) {
                         _linesTotal = _fileStream.CountLines();
                         _fileStream.Position = 0;
+                        JobStart = DateTime.UtcNow;
+                        JobEnd = null;
                         var firmware = new GrblFirmware(_loggerFactory);
                         using var reader = new StreamReader(_fileStream, Encoding.ASCII);
                         string line;
                         var progress = 0;
+                        var verifyMoveCommandCheckpoint = 0;
                         while ((line = await reader.ReadLineAsync()) != null) {
                             line = line.Trim();
                             ++_linesAt;
                             await _deviceService.WriteAsync(line);
-                            while (firmware.IsBusy(await _deviceService.CommandResponseAsync("?"))) {
-                                await Task.Delay(500);
+                            if (verifyMoveCommandCheckpoint >= 10) {
+                                _hubService.Publish(JobInfoFactory());
+
+                                // IsBusy is blocking.
+                                while (firmware.IsBusy(await _deviceService.CommandResponseAsync("?"))) {
+                                    await Task.Delay(500);
+                                }
+                                verifyMoveCommandCheckpoint = 0;
+                                _hubService.Publish(JobInfoFactory());
                             }
                             while (State == JobStates.Pause) {
-                                await Task.Delay(500);
+                                await Task.Delay(1000, _cancellationToken);
                             }
                             if (State == JobStates.Stopping) {
                                 State = JobStates.Stop;
@@ -146,10 +166,11 @@ namespace GcodeController {
                         _logger.LogInformation($"Job Completed {Path.GetFileName(_fileStream.Name)}");
                         _hubService.Publish(JobInfoFactory());
                         _fileStream = null;
-                        await Task.Delay(500);
+                        JobEnd = DateTime.UtcNow;
+                        await Task.Delay(500, _cancellationToken);
                     }
                 }
-            });
+            }, _cancellationToken);
         }
 
         public void Dispose() => StopJob();

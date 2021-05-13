@@ -9,27 +9,29 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GcodeController {
 
     public interface IEmbededWebServer : IDisposable {
-
         Task Start(ServiceProvider serviceProvider);
     }
 
     public class EmbededWebServer : IEmbededWebServer {
         private WebServer _server;
         private readonly ILogger<EmbededWebServer> _logger;
+        private readonly CancellationToken _cancellationToken;
 
-        public EmbededWebServer(ILoggerFactory loggerFactory) {
+        public EmbededWebServer(ILoggerFactory loggerFactory, CancellationToken cancellationToken) {
             _logger = loggerFactory.CreateLogger<EmbededWebServer>();
+            _cancellationToken = cancellationToken;
         }
 
         public Task Start(ServiceProvider serviceProvider) {
-            Func<IServiceScope> scopeFactory = () => {
+            IServiceScope scopeFactory() {
                 return serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-            };
+            }
             var assembly = Assembly.GetExecutingAssembly();
             _server = new WebServer(o => o
                     .WithUrlPrefix("http://*:8081")
@@ -58,7 +60,7 @@ namespace GcodeController {
                         break;
                 }
             });
-            return _server.RunAsync();
+            return _server.RunAsync(_cancellationToken);
         }
 
         public void Dispose() => _server?.Dispose();

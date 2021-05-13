@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -9,13 +10,30 @@ namespace GcodeController {
 
     public interface IFileService {
 
-        FileStream Get(string name);
+        FileResponse Get(string name);
 
-        Task<bool> SaveAsync(Stream stream, string name);
+        Task<FileResponse> SaveAsync(Stream stream, string name);
 
         void Delete(string name);
+        IEnumerable<FileResponse> List();
+    }
 
-        string[] List();
+    public class FileResponse {
+        private FileStream _fileStream;
+
+        public FileResponse() {
+        }
+
+        public FileResponse(FileStream fileStream) {
+            _fileStream = fileStream;
+        }
+
+        public string Name {
+            get; set;
+        }
+
+        public FileStream GetStream() => _fileStream;
+
     }
 
     public class FileService : IFileService {
@@ -31,7 +49,7 @@ namespace GcodeController {
             }
         }
 
-        public async Task<bool> SaveAsync(Stream stream, string name) {
+        public async Task<FileResponse> SaveAsync(Stream stream, string name) {
             var destFileName = Path.Combine(_appPath, name);
             if (File.Exists(destFileName)) {
                 File.Delete(destFileName);
@@ -61,7 +79,10 @@ namespace GcodeController {
             File.Delete(destFileName);
             File.Move(transformFileStream.Name, destFileName);
             _logger.LogInformation($"Created {name}");
-            return File.Exists(destFileName);
+            if (File.Exists(destFileName)) {
+                throw new FileNotFoundException(destFileName);
+            }
+            return new FileResponse { Name = Path.GetFileName(destFileName) };
         }
 
         public void Delete(string name) {
@@ -72,11 +93,13 @@ namespace GcodeController {
             }
         }
 
-        public string[] List() => Directory.GetFiles(_appPath).Select(x => Path.GetFileName(x)).ToArray();
+        public IEnumerable<FileResponse> List() => Directory.GetFiles(_appPath)
+            .Select(x => new FileResponse { Name = Path.GetFileName(x) })
+            .ToArray();
 
-        public FileStream Get(string name) {
+        public FileResponse Get(string name) {
             var file = Path.Combine(_appPath, name);
-            return File.OpenRead(file);
+            return new FileResponse(File.OpenRead(file)) { Name = file };
         }
     }
 }

@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 namespace GcodeController.Handlers {
 
     public interface IFilesHandler {
-        Task<bool> SaveAsync(Stream stream, string fileName);
-        IEnumerable<string> List();
+        Task<FileResponse> SaveAsync(Stream stream, string fileName);
+        IEnumerable<FileResponse> List();
         void Delete(string fileName);
 
 
@@ -23,17 +23,14 @@ namespace GcodeController.Handlers {
 
         public void Delete(string fileName) => _fileService.Delete(fileName);
 
-        public IEnumerable<string> List() => _fileService.List();
+        public IEnumerable<FileResponse> List() => _fileService.List();
 
-        public async Task<bool> SaveAsync(Stream stream, string fileName) =>
+        public async Task<FileResponse> SaveAsync(Stream stream, string fileName) =>
             await _fileService.SaveAsync(stream, fileName);
 
-
-        public Task Get(string fileName) {
+        public Stream Get(string fileName) {
             var stream = _fileService.Get(fileName);
-
-            //_fileService.Get(fileName);
-            return Task.Delay(100);
+            return stream?.GetStream();
         }
     }
 }

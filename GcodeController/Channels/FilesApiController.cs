@@ -24,7 +24,7 @@ namespace GcodeController.Channels {
 
         [Description("Upload single file to be used in jobs")]
         [Route(HttpVerbs.Post, "/", true)]
-        public async Task<bool> SaveAsync() {
+        public async Task<FileResponse> SaveAsync() {
             var parser = await MultipartFormDataParser.ParseAsync(Request.InputStream);
             if (parser?.Files is null) {
                 throw HttpException.NotFound("No file uploaded");
@@ -37,7 +37,7 @@ namespace GcodeController.Channels {
 
         [Description("Get a list of files")]
         [Route(HttpVerbs.Get, "/", true)]
-        public IEnumerable<string> List() => _filesHandler.List();
+        public IEnumerable<FileResponse> List() => _filesHandler.List();
 
     }
 }

@@ -13,15 +13,13 @@
 
 ✅ Upload/Manage Files
 
-✅ API First
+✅ API with OpenAPI documentation
 
-✅ MQTT / WebSocket Support with matching API responses
+✅ MQTT / WebSocket Support (Rest API responses matching)
 
 ✅ Detailed Logs
 
-✅ Auto saving configuration
-
-✅ OpenAPI
+✅ Stream Webcam support
 
 ## ✨ Demo
 
@@ -109,3 +107,6 @@ Buy me a coffee ☕: <a href="https://www.buymeacoffee.com/skittles">skittles</a
 
 Copyright © 2021 [Spencer Kittleson](https://github.com/skittleson).<br />
 This project is [MIT](https://github.com/skittleson/GcodeController/blob/master/LICENSE) licensed.
+
+## References 
+ - https://docs.microsoft.com/en-us/dotnet/core/deploying/single-file

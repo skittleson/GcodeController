@@ -33,10 +33,17 @@ const app = new Vue({
       fileName: "",
       percentage: 0,
       state: '-',
+      elapsed : 0
     },
-    socket: new WebSocket(`ws://${new URL(window.location.href).host}/socket`)
+    socket: new WebSocket(`ws://${new URL(window.location.href).host}/socket`),
+    settings: {
+      webcamUrl: null
+    }
   },
   async beforeMount() {
+    if (localStorage.getItem('settings')) {
+      this.settings = JSON.parse(localStorage.getItem('settings'));
+    }
     const response = await fetch("/api/serial", fetchOptionsFactory("GET"));
     if (response.status != 200) return;
     const devices = await response.json();
@@ -46,7 +53,7 @@ const app = new Vue({
         if (device.isOpen) {
           this.port = device.port;
           this.baudRate = Number(device.baudRate);
-          this.connected = true;
+          this.connected = device.isOpen;
         } else {
           this.ports.push(device.port);
         }
@@ -75,7 +82,7 @@ const app = new Vue({
         .map((e) => {
           return `${e.timestamp} - ${e.message}\r\n`;
         });
-    },
+    }    
   },
   methods: {
     connect: async function () {
@@ -117,8 +124,13 @@ const app = new Vue({
     buttonSendCommand: async function (e) {
       await this.sendCommand(e.target.value);
     },
+    saveSettings: function () {
+      localStorage.setItem("settings", JSON.stringify(this.settings));
+    },
     sendCommand: async function (command) {
-      this.commandHistory.push(command);
+      if (this.commandHistory.indexOf(command) >= 0) {
+        this.commandHistory.push(command);
+      }
       const response = await fetch(
         `/api/cmnd`,
         fetchOptionsFactory("POST", JSON.stringify({ command: command, port: this.port }))
@@ -221,6 +233,7 @@ const app = new Vue({
       this.job.percentage = jobInfo.percentage;
       this.job.state = jobInfo.state;
       this.job.fileName = jobInfo.fileName;
+      this.job.elapsed = jobInfo.elapsed;
     }
   }
 });

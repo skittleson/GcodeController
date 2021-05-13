@@ -26,7 +26,7 @@ namespace GcodeController.Tests {
 
             // Assert
             var modified = _jobFileService.Get(uploadedAsFilename);
-            modified.Close();
+            modified.GetStream()?.Close();
             var contents = await File.ReadAllTextAsync(modified.Name);
             Assert.Equal(contents, $"foo{Environment.NewLine}");
         }
