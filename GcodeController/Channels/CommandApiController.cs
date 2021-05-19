@@ -3,7 +3,9 @@ using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using GcodeController.Handlers;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.ComponentModel;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace GcodeController.Channels {
@@ -18,6 +20,10 @@ namespace GcodeController.Channels {
 
         [Description("Execute command on serial port with response")]
         [Route(HttpVerbs.Post, "/", true)]
-        public async Task<string> ExecuteAsync([JsonData] CommandRequest commandRequest) => await _commandHandler.ExecuteAsync(commandRequest);
+        public async Task ExecuteAsync([JsonData] CommandRequest commandRequest) {
+            var dataBuffer = Encoding.Default.GetBytes(await _commandHandler.ExecuteAsync(commandRequest));
+            using var stream = HttpContext.OpenResponseStream();
+            await stream.WriteAsync(dataBuffer.AsMemory(0, dataBuffer.Length));
+        }
     }
 }

@@ -9,12 +9,11 @@ namespace GcodeController.Handlers {
         Task<string> ExecuteAsync(CommandRequest commandRequest);
 
     }
-
     public class CommandHandler : AHandler, ICommandHandler {
         public const string PREFIX = "cmnd";
         public override string GetPrefix => PREFIX;
-        private IDeviceService _serialDevice;
-        private ILogger<SerialHandler> _logger;
+        private readonly IDeviceService _serialDevice;
+        private readonly ILogger<SerialHandler> _logger;
 
         public CommandHandler(ILoggerFactory loggerFactory, IDeviceService serialDevice) {
             _serialDevice = serialDevice;
@@ -26,7 +25,6 @@ namespace GcodeController.Handlers {
             }
             _logger.LogWarning("No matching device connected");
             return string.Empty;
-
         }
     }
 
@@ -35,7 +33,7 @@ namespace GcodeController.Handlers {
             get; set;
         }
 
-        [Description("Command to run on serial port")]
+        [Description("Command to execute on serial device")]
         public string Command {
             get; set;
         }

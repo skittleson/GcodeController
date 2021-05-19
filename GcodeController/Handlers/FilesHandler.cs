@@ -12,15 +12,20 @@ namespace GcodeController.Handlers {
 
     }
     public class FilesHandler : AHandler, IFilesHandler {
+
+        //--- Fields ---
         private IFileService _fileService;
 
+        //--- Properties ---
+        public const string PREFIX = "files";
+        public override string GetPrefix => PREFIX;
+
+        //--- Constructors ---
         public FilesHandler(IFileService fileService) {
             _fileService = fileService;
         }
 
-        public const string PREFIX = "files";
-        public override string GetPrefix => PREFIX;
-
+        //--- Methods ---
         public void Delete(string fileName) => _fileService.Delete(fileName);
 
         public IEnumerable<FileResponse> List() => _fileService.List();

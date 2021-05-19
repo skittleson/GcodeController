@@ -152,16 +152,17 @@ namespace GcodeController.Services {
             var result = string.Empty;
             var ct = new CancellationTokenSource(2000);
             try {
-                await _serialPort.BaseStream.WriteAsync(bytes, 0, bytes.Length, ct.Token);
+                await _serialPort.BaseStream.WriteAsync(bytes.AsMemory(0, bytes.Length), ct.Token);
 
-                // This makes many assumptions BUT over requesting for data doesnt work either.
-                await Task.Delay(500);
-                await Task.Run(() => result = _serialPort.ReadExisting(), ct.Token);
+                // This makes many assumptions but its safe that the entire response will be back within this time
+                await Task.Delay(500, ct.Token);
+                var buffer = new byte[4096];
+                await _serialPort.BaseStream.ReadAsync(buffer.AsMemory(0, _serialPort.BytesToRead), ct.Token);
+                result = Encoding.Default.GetString(buffer);
             } catch (TaskCanceledException _) {
                 _logger.LogWarning("command has timed out on: " + command);
             } catch (Exception ex) {
                 _logger.LogCritical(ex, "Unable to get a success resposne: ");
-
             }
             return new KeyValuePair<Guid, string>(idCommandKv.Key, result.Trim());
         }
