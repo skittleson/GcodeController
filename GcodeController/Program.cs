@@ -13,13 +13,13 @@ namespace GcodeController {
 
         private static void Main(string[] args) {
             var ct = new CancellationTokenSource();
-
             var serviceProvider = new ServiceCollection()
                .AddLogging(configure => {
                    configure.AddConsole();
                    configure.SetMinimumLevel(LogLevel.Debug);
                })
                .AddSingleton(typeof(CancellationToken), ct.Token)
+               .AddSingleton(AppConfigFactory.GetConfig())
                .AddSingleton<IDeviceService, DeviceService>()
                .AddSingleton<IEmbededWebServer, EmbededWebServer>()
                .AddSingleton<IFileService, FileService>()
@@ -41,7 +41,7 @@ namespace GcodeController {
                 await serviceProvider.GetService<IEmbededWebServer>().Start(serviceProvider);
             }, ct.Token);
             Console.WriteLine("Press any key to exit");
-            Console.ReadLine();
+            Console.ReadKey(true);
             serviceProvider.Dispose();
         }
     }

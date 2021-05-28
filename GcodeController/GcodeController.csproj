@@ -5,16 +5,24 @@
     <TargetFramework>net5.0</TargetFramework>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishTrimmed>true</PublishTrimmed>
     <PublishReadyToRun>true</PublishReadyToRun>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <DebugType>embedded</DebugType>
     <Version>1.0.1</Version>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="libSystem.IO.Ports.Native.so" />
+    <None Remove="web\api.js" />
     <None Remove="web\doc.html" />
     <None Remove="web\index.html" />
     <None Remove="web\index.js" />
@@ -23,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="web\api.js" />
     <EmbeddedResource Include="web\doc.html" />
     <EmbeddedResource Include="web\index.html" />
     <EmbeddedResource Include="web\index.js" />
@@ -34,14 +43,17 @@
     <PackageReference Include="EmbedIO" Version="3.4.3" />
     <PackageReference Include="M2MqttDotnetCore" Version="1.1.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
     <PackageReference Include="HttpMultipartParser" Version="5.0.0" />
-    <PackageReference Include="Easy.Common" Version="3.8.5" />
+    <PackageReference Include="Easy.Common" Version="3.8.7" />
     <PackageReference Include="Microsoft.OpenApi" Version="1.2.3" />
     <PackageReference Include="Microsoft.OpenApi.Readers" Version="1.2.3" />
     <PackageReference Include="PubSub" Version="4.0.1" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
     <PackageReference Include="System.IO.Ports" Version="5.0.1" />
   </ItemGroup>
 

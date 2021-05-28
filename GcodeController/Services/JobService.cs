@@ -123,7 +123,7 @@ namespace GcodeController {
 
         private void Background() {
             Task.Run(async () => {
-                while (true) {
+                while (!_cancellationToken.IsCancellationRequested) {
                     if (_fileStream != null) {
                         _linesTotal = _fileStream.CountLines();
                         _fileStream.Position = 0;

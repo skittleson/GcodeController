@@ -2,6 +2,7 @@
 using EmbedIO.WebApi;
 using GcodeController.Channels;
 using GcodeController.Handlers;
+using GcodeController.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -21,10 +22,12 @@ namespace GcodeController {
     public class EmbededWebServer : IEmbededWebServer {
         private WebServer _server;
         private readonly ILogger<EmbededWebServer> _logger;
+        private readonly IAppConfig _config;
         private readonly CancellationToken _cancellationToken;
 
-        public EmbededWebServer(ILoggerFactory loggerFactory, CancellationToken cancellationToken) {
+        public EmbededWebServer(ILoggerFactory loggerFactory, IAppConfig config, CancellationToken cancellationToken) {
             _logger = loggerFactory.CreateLogger<EmbededWebServer>();
+            _config = config;
             _cancellationToken = cancellationToken;
         }
 
@@ -34,7 +37,7 @@ namespace GcodeController {
             }
             var assembly = Assembly.GetExecutingAssembly();
             _server = new WebServer(o => o
-                    .WithUrlPrefix("http://*:8081")
+                    .WithUrlPrefix($"http://*:{_config.Port}")
                     .WithMode(HttpListenerMode.EmbedIO))
                 .WithLocalSessionManager()
                 .WithModule(new WebSocketModuleChannel("/socket", serviceProvider))
@@ -44,16 +47,17 @@ namespace GcodeController {
                 .WithWebApi($"/api/{FilesHandler.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new FilesApiController(scopeFactory())))
                 .WithWebApi($"/api/{CommandHandler.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new CommandApiController(scopeFactory())))
                 .WithEmbeddedResources("/", assembly, "GcodeController.web");
-
-            var ipAddress = Dns.GetHostAddresses(Dns.GetHostName()).FirstOrDefault();
-            _logger.LogInformation($"Go to http://{ipAddress}/8081");
-
+            var ipv4Address = Dns
+                .GetHostAddresses(Dns.GetHostName())
+                .Select(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                .FirstOrDefault();
+            _logger.LogInformation($"Go to http://{ipv4Address}:{_config.Port}");
             _server.StateChanged += (s, e) => _logger.LogDebug($"WebServer New State - {e.NewState}");
             _server.HandleHttpException(async (context, exception) => {
                 context.Response.StatusCode = exception.StatusCode;
                 switch (exception.StatusCode) {
                     case 404:
-                        await context.SendStringAsync("Not Found", "text/html", Encoding.UTF8);
+                        await context.SendStringAsync("Not Found", "plain/text", Encoding.UTF8);
                         break;
                     default:
                         await HttpExceptionHandler.Default(context, exception);
@@ -68,7 +72,7 @@ namespace GcodeController {
     }
 
 
-    //NOTE: the ONLY goal with this is to keep a standard of serialization with all channels (api, mqtt, )
+    //NOTE: the ONLY goal with this is to keep a standard of serialization with all channels (api, websocket, mqtt)
     public static class CustomResponseSerializer {
         private static readonly ResponseSerializerCallback ChunkedEncodingBaseSerializer = GetBaseSerializer(false);
         private static readonly ResponseSerializerCallback BufferingBaseSerializer = GetBaseSerializer(true);
@@ -85,6 +89,7 @@ namespace GcodeController {
                     preferCompression = true;
                 }
                 var responseString = System.Text.Json.JsonSerializer.Serialize(data, Utils.JsonOptions());
+                context.Response.ContentType = "application/json; charset=utf-8";
                 using var text = context.OpenResponseText(context.Response.ContentEncoding, bufferResponse, preferCompression);
                 await text.WriteAsync(responseString).ConfigureAwait(false);
             };

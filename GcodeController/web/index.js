@@ -1,22 +1,5 @@
-﻿function fetchOptionsFactory(method, body = null) {
-  return {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      cache: "no-store",
-    },
-    body: body
-  };
-}
-
-function wait(time) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, time);
-  });
-}
-
+﻿import { GcodeControllerApi } from "./api.js";
+const api = GcodeControllerApi.initialize("/api/");
 const app = new Vue({
   el: "#main",
   data: {
@@ -32,24 +15,22 @@ const app = new Vue({
     job: {
       fileName: "",
       percentage: 0,
-      state: '-',
-      elapsed : 0
+      state: "-",
+      elapsed: 0,
     },
     socket: new WebSocket(`ws://${new URL(window.location.href).host}/socket`),
     settings: {
-      webcamUrl: null
-    }
+      webcamUrl: null,
+    },
   },
   async beforeMount() {
-    if (localStorage.getItem('settings')) {
-      this.settings = JSON.parse(localStorage.getItem('settings'));
+    if (localStorage.getItem("settings")) {
+      this.settings = JSON.parse(localStorage.getItem("settings"));
     }
-    const response = await fetch("/api/serial", fetchOptionsFactory("GET"));
-    if (response.status != 200) return;
-    const devices = await response.json();
+    const devices = await api.serial.list();
     if (devices) {
       this.ports.splice(0, this.ports.length);
-      devices.map(device => {
+      devices.map((device) => {
         if (device.isOpen) {
           this.port = device.port;
           this.baudRate = Number(device.baudRate);
@@ -67,59 +48,42 @@ const app = new Vue({
     const appBeforeMount = this;
     this.socket.onmessage = function (event) {
       const message = JSON.parse(event.data);
-      if (message.name === 'JobInfo') {
+      if (message.name === "JobInfo") {
         appBeforeMount.statusPolling(message.data);
       }
     };
-
   },
   computed: {
     canControl: function () {
-      return this.job.state === 'Stop' || this.job.state === 'Complete';
+      return this.job.state === "Stop" || this.job.state === "Complete";
     },
     console: function () {
-      return this.log
-        .map((e) => {
-          return `${e.timestamp} - ${e.message}\r\n`;
-        });
-    }    
+      return this.log.map((e) => {
+        return `${e.timestamp} - ${e.message}\r\n`;
+      });
+    },
   },
   methods: {
     connect: async function () {
-      const response = await fetch(
-        `/api/serial/${encodeURI(this.port)}`,
-        fetchOptionsFactory(
-          "POST",
-          JSON.stringify({ baudRate: Number(this.baudRate), port: this.port })
-        )
-      );
-      var result = await response.text();
-      this.connected = response.status === 200;
-      if (this.connected && result) {
+      this.connected = await api.serial.post(this.baudRate, this.port);
+      if (this.connected) {
         localStorage.setItem("port", this.port);
         localStorage.setItem("baudRate", this.baudRate);
       }
     },
     disconnect: async function () {
       if (confirm(`Disconnect from ${this.port}?`)) {
-        const response = await fetch(
-          `/api/serial/${encodeURI(this.port)}`,
-          fetchOptionsFactory("DELETE")
-        );
-        await response.text();
-        if (response.status === 200) {
-          this.connected = false;
-        }
+        this.connected = await api.serial.delete(this.port);
       }
     },
     clearConsole: function () {
       this.log.splice(0, this.log.length);
     },
     goHome: async function () {
-      await this.sendCommand("G90 X0 Y0 Z0");
+      await api.command.post("G90 X0 Y0 Z0", this.port);
     },
     setHome: async function () {
-      await this.sendCommand("G92 X0 Y0 Z0");
+      await api.command.post("G92 X0 Y0 Z0", this.port);
     },
     buttonSendCommand: async function (e) {
       await this.sendCommand(e.target.value);
@@ -131,46 +95,38 @@ const app = new Vue({
       if (this.commandHistory.indexOf(command) >= 0) {
         this.commandHistory.push(command);
       }
-      const response = await fetch(
-        `/api/cmnd`,
-        fetchOptionsFactory("POST", JSON.stringify({ command: command, port: this.port }))
-      );
-      const message = await response.text();
+      const result = await api.command.post(command, this.port);
+      console.log(result);
       this.log.push({
-        message: message.trim().trim('"'),
+        message: result,
         timestamp: Date.now(),
       });
       if (this.log.length > 10) {
         this.log.shift();
       }
     },
-    startJob: async function (file) {
-      if (confirm(`Start ${file}?`)) {
-        const response = await fetch(
-          `/api/jobs/${file}`,
-          fetchOptionsFactory("POST")
-        );
-        if (response.status === 200) {
-          await response.text();
+    startJob: async function (fileName) {
+      if (confirm(`Start ${fileName}?`)) {
+        const isStarted = await api.jobs.post(fileName);
+        if (isStarted) {
           this.job.percentage = 0;
+        } else {
+          alert("Fail to start job");
         }
       }
     },
     stopJob: async function () {
       if (confirm(`Stop ${this.job.fileName}?`)) {
         this.job.status = 1;
-        const response = await fetch(`/api/jobs/${this.job.fileName}`, fetchOptionsFactory("DELETE"));
-        await response.text();
+        await api.jobs.delete();
       }
     },
     pauseJob: async function () {
-      const response = await fetch(`/api/jobs/${this.job.fileName}`, fetchOptionsFactory("PUT"));
-      await response.text();
+      await api.jobs.put();
     },
     deleteFile: async function (file) {
       if (confirm(`Delete ${file}?`)) {
-        const response = await fetch(`/api/jobs/${file}`, fetchOptionsFactory("DELETE"));
-        await response.text();
+        await api.files.delete(file);
         await this.getFiles();
       }
     },
@@ -208,34 +164,20 @@ const app = new Vue({
       this.$refs.fileInput.click();
     },
     async onFilePicked(event) {
-      //https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-
-      const files = event.target.files;
-      const formData = new FormData();
-      formData.append("gcode_file", files[0]);
-      const response = await fetch("/api/files", {
-        method: "POST",
-        body: formData,
-      });
-      await response.text();
+      await api.files.post(event.target.files[0]);
       await this.getFiles();
     },
     async getFiles() {
-      const response = await fetch(
-        "/api/files",
-        fetchOptionsFactory("GET")
-      );
-      const filesArray = await response.json();
       this.files.splice(0, this.files.length);
-      this.files.push(...filesArray);
+      this.files.push(...(await api.files.list()));
     },
     statusPolling(jobInfo) {
       this.job.percentage = jobInfo.percentage;
       this.job.state = jobInfo.state;
       this.job.fileName = jobInfo.fileName;
       this.job.elapsed = jobInfo.elapsed;
-    }
-  }
+    },
+  },
 });
 
 // const btn = document.getElementById("toggleTheme");

@@ -19,7 +19,7 @@
 
 ✅ Detailed Logs
 
-✅ Stream Webcam support
+✅ Streaming Webcam support
 
 ## ✨ Demo
 
@@ -86,6 +86,7 @@ Feel free to check [issues page](https://github.com/skittleson/GcodeController/i
 - Github: [@skittleson](https://github.com/skittleson)
 - LinkedIn: [@skittleson](https://www.linkedin.com/in/skittleson)
 - StackOverflow: [spencer](https://stackoverflow.com/users/2414540/spencer)
+- Blog: [DoCodeThatMatters](https://docodethatmatters.com)
 
 ## Show your support
 
@@ -105,7 +106,7 @@ Buy me a coffee ☕: <a href="https://www.buymeacoffee.com/skittles">skittles</a
 
 ## 📝 License
 
-Copyright © 2021 [Spencer Kittleson](https://github.com/skittleson).<br />
+Copyright © 2021 [Spencer Kittleson - Do Code That Matters](https://DoCodeThatMatters.com). <br />
 This project is [MIT](https://github.com/skittleson/GcodeController/blob/master/LICENSE) licensed.
 
 ## References 

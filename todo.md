@@ -1,5 +1,4 @@
-- [x] header for managing 
-- [x] same commands should be skipped for history
+- configurations endpoint
 - cli?
 - how long based on previous commands
 - use grbl working coordinates 

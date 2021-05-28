@@ -38,6 +38,5 @@ namespace GcodeController.Channels {
         [Description("Get a list of files")]
         [Route(HttpVerbs.Get, "/", true)]
         public IEnumerable<FileResponse> List() => _filesHandler.List();
-
     }
 }

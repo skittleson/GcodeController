@@ -69,11 +69,11 @@ namespace GcodeController {
             return result;
         }
 
-        public static T GetAttributeValue<T>(Type sourceType) {
+        public static T? GetAttributeValue<T>(Type sourceType) {
             var attribute = sourceType.GetCustomAttributes(typeof(T), false).FirstOrDefault();
             return attribute is null ? default : (T)attribute;
         }
-        public static T GetAttributeValue<T>(MethodInfo methodInfo) {
+        public static T? GetAttributeValue<T>(MethodInfo methodInfo) {
             var attribute = methodInfo.GetCustomAttributes(typeof(T), false).FirstOrDefault();
             return attribute is null ? default : (T)attribute;
         }

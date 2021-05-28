@@ -1,5 +1,4 @@
-﻿using GcodeController.GcodeFirmwares;
-using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,36 +11,27 @@ using System.Threading.Tasks;
 namespace GcodeController.Services {
 
     public interface IDeviceService {
-
         Task<bool> OpenAsync(string port, int baudRate);
-
         void Close();
-
         Task<Guid> WriteAsync(string command, bool responseRequired = false);
-
         string PortName {
             get;
         }
-
         int BaudRate {
             get;
         }
-
         bool IsOpen {
             get;
         }
         Channel<KeyValuePair<Guid, string>> RequestChannel {
             get;
         }
-
         Task<string> CommandResponseAsync(string command);
-
         string[] GetPorts();
     }
 
     public class DeviceService : IDeviceService, IDisposable {
         private SerialPort _serialPort;
-        private IGcodeFirmware _firmware;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<DeviceService> _logger;
         public string PortName => _serialPort?.PortName ?? string.Empty;
@@ -85,7 +75,6 @@ namespace GcodeController.Services {
 
                 // Wake up!
                 await WriteAsync("\n");
-                _firmware = new GrblFirmware(_loggerFactory);
                 _logger.LogInformation($"Connected {port} @ {baudRate}");
             } catch {
                 _logger.LogWarning($"Unable to open port {port} @ {baudRate}");
@@ -152,17 +141,20 @@ namespace GcodeController.Services {
             var result = string.Empty;
             var ct = new CancellationTokenSource(2000);
             try {
+
+                // https://stackoverflow.com/a/12651059/2414540
+                // Time to send = bytes x bits_per_character / bits_per_second
                 await _serialPort.BaseStream.WriteAsync(bytes.AsMemory(0, bytes.Length), ct.Token);
 
                 // This makes many assumptions but its safe that the entire response will be back within this time
                 await Task.Delay(500, ct.Token);
                 var buffer = new byte[4096];
                 await _serialPort.BaseStream.ReadAsync(buffer.AsMemory(0, _serialPort.BytesToRead), ct.Token);
-                result = Encoding.Default.GetString(buffer);
+                result = Encoding.Default.GetString(buffer).Replace("\u0000", string.Empty).Trim();
             } catch (TaskCanceledException _) {
                 _logger.LogWarning("command has timed out on: " + command);
             } catch (Exception ex) {
-                _logger.LogCritical(ex, "Unable to get a success resposne: ");
+                _logger.LogCritical(ex, "Unable to get a success response: ");
             }
             return new KeyValuePair<Guid, string>(idCommandKv.Key, result.Trim());
         }

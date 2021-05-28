@@ -79,7 +79,7 @@ namespace GcodeController {
             File.Delete(destFileName);
             File.Move(transformFileStream.Name, destFileName);
             _logger.LogInformation($"Created {name}");
-            if (File.Exists(destFileName)) {
+            if (!File.Exists(destFileName)) {
                 throw new FileNotFoundException(destFileName);
             }
             return new FileResponse { Name = Path.GetFileName(destFileName) };

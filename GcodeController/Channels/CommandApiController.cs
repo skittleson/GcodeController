@@ -22,6 +22,8 @@ namespace GcodeController.Channels {
         [Route(HttpVerbs.Post, "/", true)]
         public async Task ExecuteAsync([JsonData] CommandRequest commandRequest) {
             var dataBuffer = Encoding.Default.GetBytes(await _commandHandler.ExecuteAsync(commandRequest));
+            Response.ContentType = "plain/text";
+            Response.ContentLength64 = dataBuffer.Length;
             using var stream = HttpContext.OpenResponseStream();
             await stream.WriteAsync(dataBuffer.AsMemory(0, dataBuffer.Length));
         }

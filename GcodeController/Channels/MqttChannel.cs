@@ -38,7 +38,7 @@ namespace GcodeController.Channels {
             _client.MqttMsgPublishReceived += _client_MqttMsgPublishReceived;
             _client.Subscribe(new[] {
                 TopicFactory(JobService.PREFIX, true),
-                TopicFactory(CommandHandler.PREFIX, true) //TODO double command!
+                TopicFactory(CommandHandler.PREFIX, true) //TODO avoid double command!
             }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
         }
 
