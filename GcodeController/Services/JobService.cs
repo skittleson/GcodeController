@@ -85,7 +85,14 @@ namespace GcodeController {
             _hubService = hubService;
             _cancellationToken = cancellationToken;
             State = JobStates.Stop;
-            Background();
+            Task.Run(async () => {
+                try {
+                    await Background();
+                } catch (Exception ex) {
+                    _logger.LogError(ex.Message);
+                    StopJob();
+                }
+            }, _cancellationToken);
         }
 
         public JobInfo PauseJob() {
@@ -117,56 +124,55 @@ namespace GcodeController {
             return _hubService.Publish(CreateJobInfo());
         }
 
-        private void Background() {
-            Task.Run(async () => {
-                while (!_cancellationToken.IsCancellationRequested) {
-                    if (_fileStream != null) {
-                        _linesTotal = _fileStream.CountLines();
-                        _fileStream.Position = 0;
-                        JobStart = DateTime.UtcNow;
-                        JobEnd = null;
-                        var firmware = new GrblFirmware(_loggerFactory);
-                        using var reader = new StreamReader(_fileStream, Encoding.UTF8);
-                        string line;
-                        var progress = 0;
-                        var verifyMoveCommandCheckpoint = 0;
-                        while ((line = await reader.ReadLineAsync()) != null) {
-                            line = line.Trim();
-                            ++_linesAt;
-                            await _deviceService.WriteAsync(line);
-                            if (verifyMoveCommandCheckpoint >= 10) {
-                                _hubService.Publish(CreateJobInfo());
-
-                                // IsBusy is blocking.
-                                while (firmware.IsBusy(await _deviceService.CommandResponseAsync("?"))) {
-                                    await Task.Delay(TimeSpan.FromSeconds(1));
-                                }
-                                verifyMoveCommandCheckpoint = 0;
-                                _hubService.Publish(CreateJobInfo());
-                            }
-                            while (State == JobStates.Pause) {
-                                await Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken);
-                            }
-                            if (State == JobStates.Stopping) {
-                                State = JobStates.Stop;
-                                _hubService.Publish(CreateJobInfo());
-                                break;
-                            }
-                            if (progress != CompletePercentage) {
-                                progress = CompletePercentage;
-                                _hubService.Publish(CreateJobInfo());
-                            }
-                        }
-                        State = JobStates.Complete;
-                        _fileStream.Close();
-                        _logger.LogInformation($"Job Completed {Path.GetFileName(_fileStream.Name)}");
+        private async Task Background() {
+            while (!_cancellationToken.IsCancellationRequested) {
+                if (_fileService is null) {
+                    await Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken);
+                    continue;
+                }
+                _linesTotal = _fileStream.CountLines();
+                _fileStream.Position = 0;
+                JobStart = DateTime.UtcNow;
+                JobEnd = null;
+                var firmware = new GrblFirmware(_loggerFactory);
+                using var reader = new StreamReader(_fileStream, Encoding.UTF8);
+                string line;
+                var progress = 0;
+                var verifyMoveCommandCheckpoint = 0;
+                while ((line = await reader.ReadLineAsync()) != null) {
+                    line = line.Trim();
+                    ++_linesAt;
+                    await _deviceService.WriteAsync(line);
+                    if (verifyMoveCommandCheckpoint >= 10) {
                         _hubService.Publish(CreateJobInfo());
-                        _fileStream = null;
-                        JobEnd = DateTime.UtcNow;
+
+                        // IsBusy is blocking.
+                        while (firmware.IsBusy(await _deviceService.CommandResponseAsync("?"))) {
+                            await Task.Delay(TimeSpan.FromSeconds(1));
+                        }
+                        verifyMoveCommandCheckpoint = 0;
+                        _hubService.Publish(CreateJobInfo());
+                    }
+                    while (State == JobStates.Pause) {
                         await Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken);
                     }
+                    if (State == JobStates.Stopping) {
+                        State = JobStates.Stop;
+                        _hubService.Publish(CreateJobInfo());
+                        break;
+                    }
+                    if (progress != CompletePercentage) {
+                        progress = CompletePercentage;
+                        _hubService.Publish(CreateJobInfo());
+                    }
                 }
-            }, _cancellationToken);
+                State = JobStates.Complete;
+                _fileStream.Close();
+                _logger.LogInformation($"Job Completed {Path.GetFileName(_fileStream.Name)}");
+                _hubService.Publish(CreateJobInfo());
+                _fileStream = null;
+                JobEnd = DateTime.UtcNow;                
+            }
         }
 
         public void Dispose() => StopJob();
