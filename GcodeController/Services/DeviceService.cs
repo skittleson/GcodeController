@@ -139,7 +139,7 @@ namespace GcodeController.Services {
                 bytes = Encoding.UTF8.GetBytes("\u0018"); //Ctrl+x to reset
             }
             var result = string.Empty;
-            var ct = new CancellationTokenSource(2000);
+            var ct = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             try {
 
                 // https://stackoverflow.com/a/12651059/2414540
@@ -147,7 +147,7 @@ namespace GcodeController.Services {
                 await _serialPort.BaseStream.WriteAsync(bytes.AsMemory(0, bytes.Length), ct.Token);
 
                 // This makes many assumptions but its safe that the entire response will be back within this time
-                await Task.Delay(500, ct.Token);
+                await Task.Delay(TimeSpan.FromMilliseconds(500), ct.Token);
                 var buffer = new byte[4096];
                 await _serialPort.BaseStream.ReadAsync(buffer.AsMemory(0, _serialPort.BytesToRead), ct.Token);
                 result = Encoding.Default.GetString(buffer).Replace("\u0000", string.Empty).Trim();

@@ -130,7 +130,7 @@ namespace GcodeController {
                         JobStart = DateTime.UtcNow;
                         JobEnd = null;
                         var firmware = new GrblFirmware(_loggerFactory);
-                        using var reader = new StreamReader(_fileStream, Encoding.ASCII);
+                        using var reader = new StreamReader(_fileStream, Encoding.UTF8);
                         string line;
                         var progress = 0;
                         var verifyMoveCommandCheckpoint = 0;
