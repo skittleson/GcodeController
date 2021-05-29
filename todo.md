@@ -1,6 +1,6 @@
 - configurations endpoint
-- cli?
 - how long based on previous commands
+- cli?
 - use grbl working coordinates 
 - handle websocket disconnections
 is machine still running?

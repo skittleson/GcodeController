@@ -32,7 +32,6 @@ namespace GcodeController.Services {
 
     public class DeviceService : IDeviceService, IDisposable {
         private SerialPort _serialPort;
-        private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<DeviceService> _logger;
         public string PortName => _serialPort?.PortName ?? string.Empty;
         public int BaudRate => _serialPort?.BaudRate ?? 0;
@@ -47,7 +46,6 @@ namespace GcodeController.Services {
         private Guid _statusId = new Guid("79bbad7a-3f92-4ea8-ad3a-84cfc4ce1d7a");
 
         public DeviceService(ILoggerFactory loggerFactory) {
-            _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<DeviceService>();
             RequestChannel = Channel.CreateBounded<KeyValuePair<Guid, string>>(1);
             ResponseCache = new MemoryCache(new MemoryCacheOptions());
@@ -71,7 +69,7 @@ namespace GcodeController.Services {
                 _serialPort.ReadTimeout = 10000;
                 _serialPort.WriteTimeout = 10000;
                 _serialPort.Open();
-                await Task.Delay(100);
+                await Task.Delay(TimeSpan.FromSeconds(1));
 
                 // Wake up!
                 await WriteAsync("\n");
@@ -98,7 +96,7 @@ namespace GcodeController.Services {
                             ResponseCache.Set(response.Key, response.Value, TimeSpan.FromSeconds(30));
                         }
                     }
-                    await Task.Delay(1000);
+                    await Task.Delay(TimeSpan.FromSeconds(1));
                 }
             });
         }
