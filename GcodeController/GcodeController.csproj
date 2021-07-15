@@ -24,12 +24,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <None Remove="libSystem.IO.Ports.Native.so" />
     <None Remove="web\api.js" />
     <None Remove="web\doc.html" />

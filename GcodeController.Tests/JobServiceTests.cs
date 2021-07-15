@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System;
 using System.Threading;
+using Xunit;
 
 namespace GcodeController.Tests {
     public class JobServiceTests : IDisposable {
@@ -35,6 +36,7 @@ G00 X0. Y0. Z0.25
              */
         }
 
+        [Fact]
         public void Can_start_job() {
 
             // Arrange

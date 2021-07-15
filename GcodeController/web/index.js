@@ -21,12 +21,17 @@ const app = new Vue({
     socket: new WebSocket(`ws://${new URL(window.location.href).host}/socket`),
     settings: {
       webcamUrl: null,
+      mqttServer: null,
+      locationType: null,
     },
   },
   async beforeMount() {
-    if (localStorage.getItem("settings")) {
-      this.settings = JSON.parse(localStorage.getItem("settings"));
+    const settings = await api.configuration.get();
+    if (settings) {
+      this.settings = settings;
     }
+
+    //TODO should not move forward if the API is unavailable
     const devices = await api.serial.list();
     if (devices) {
       this.ports.splice(0, this.ports.length);
@@ -88,8 +93,8 @@ const app = new Vue({
     buttonSendCommand: async function (e) {
       await this.sendCommand(e.target.value);
     },
-    saveSettings: function () {
-      localStorage.setItem("settings", JSON.stringify(this.settings));
+    saveSettings: async function () {
+      await api.configuration.save(this.settings);
     },
     sendCommand: async function (command) {
       if (this.commandHistory.indexOf(command) >= 0) {

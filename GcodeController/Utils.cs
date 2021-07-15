@@ -31,7 +31,7 @@ namespace GcodeController {
         public static JsonSerializerOptions JsonOptions() {
             var options = new JsonSerializerOptions();
             options.Converters.Add(new JsonStringEnumConverter());
-            options.IgnoreNullValues = true;
+            options.IgnoreNullValues = false;
             options.DictionaryKeyPolicy = null;
             options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             options.IgnoreReadOnlyProperties = false;

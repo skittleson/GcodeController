@@ -5,24 +5,23 @@ using GcodeController.Models;
 using GcodeController.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
+using System.Threading.Tasks;
 
 namespace GcodeController.Channels {
 
-    //[DisplayName(CommandHandler.PREFIX)]
+    [DisplayName(PREFIX)]
     public class ConfigurationApiController : WebApiController {
-        //private readonly ICommandHandler _commandHandler;
+        public const string PREFIX = "configuration";
 
         public ConfigurationApiController(IServiceScope scope) : base() {
-            //  _commandHandler = scope.ServiceProvider.GetService<ICommandHandler>();
         }
 
         [Description("Save Configuration")]
         [Route(HttpVerbs.Post, "/", true)]
-        public void Save([JsonData] IAppConfig config) => AppConfigFactory.SaveConfig(config);
+        public async Task SaveAsync([JsonData] AppConfig config) => await AppConfigFactory.SaveConfigAsync(config);
 
-        [Description("Get Current Configuration")]
+        [Description("Get Current Configuration from local directory, user directory, or system defaults")]
         [Route(HttpVerbs.Get, "/", true)]
-        public IAppConfig Get() => AppConfigFactory.GetConfig();
-
+        public AppConfig Get() => AppConfigFactory.GetConfig();
     }
 }

@@ -7,7 +7,25 @@ export class GcodeControllerApi {
     this.jobs = new JobsApi(apiUri + "jobs");
     this.command = new CommandApi(apiUri + "cmnd");
     this.files = new FilesApi(apiUri + "files");
+    this.configuration = new ConfigurationApi(apiUri + "configuration");
   }
+}
+
+class ConfigurationApi {
+  constructor(apiUri) {
+    this._apiUri = apiUri;
+  }
+  get = async () =>
+    await fetchResponseHandler(
+      await fetch(`${this._apiUri}`, fetchOptionsFactory("GET"))
+    );
+  save = async (configuration) =>
+    await fetchResponseHandler(
+      await fetch(
+        `${this._apiUri}`,
+        fetchOptionsFactory("POST", JSON.stringify(configuration))
+      )
+    );
 }
 
 class SerialApi {

@@ -1,28 +1,12 @@
-﻿using System;
-
-namespace GcodeController.Models {
+﻿namespace GcodeController.Models {
 
     public enum AppConfigLocationType {
-        Default,
-        CurrentDirectory,
-        UserDirectory
+        Default = 0,
+        CurrentDirectory = 1,
+        UserDirectory = 2
     }
-
-    public interface IAppConfig {
-        Uri MqttServer {
-            get;
-        }
-
-        int Port {
-            get;
-        }
-
-        AppConfigLocationType LocationType {
-            get;
-        }
-    }
-    public class AppConfig : IAppConfig {
-        public Uri MqttServer {
+    public class AppConfig {
+        public string MqttServer {
             get; set;
         }
 
@@ -31,6 +15,10 @@ namespace GcodeController.Models {
         }
 
         public AppConfigLocationType LocationType {
+            get; set;
+        }
+
+        public string WebcamUrl {
             get; set;
         }
     }

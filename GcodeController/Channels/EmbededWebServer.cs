@@ -22,10 +22,10 @@ namespace GcodeController {
     public class EmbededWebServer : IEmbededWebServer {
         private WebServer _server;
         private readonly ILogger<EmbededWebServer> _logger;
-        private readonly IAppConfig _config;
+        private readonly AppConfig _config;
         private readonly CancellationToken _cancellationToken;
 
-        public EmbededWebServer(ILoggerFactory loggerFactory, IAppConfig config, CancellationToken cancellationToken) {
+        public EmbededWebServer(ILoggerFactory loggerFactory, AppConfig config, CancellationToken cancellationToken) {
             _logger = loggerFactory.CreateLogger<EmbededWebServer>();
             _config = config;
             _cancellationToken = cancellationToken;
@@ -46,6 +46,7 @@ namespace GcodeController {
                 .WithWebApi($"/api/{JobService.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new JobsApiController(scopeFactory())))
                 .WithWebApi($"/api/{FilesHandler.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new FilesApiController(scopeFactory())))
                 .WithWebApi($"/api/{CommandHandler.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new CommandApiController(scopeFactory())))
+                .WithWebApi($"/api/{ConfigurationApiController.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new ConfigurationApiController(scopeFactory())))
                 .WithEmbeddedResources("/", assembly, "GcodeController.web");
             var ipv4Address = Dns
                 .GetHostAddresses(Dns.GetHostName())

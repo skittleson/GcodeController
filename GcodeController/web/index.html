@@ -89,7 +89,7 @@
               <div class="row">
                 <div>
                   <img
-                    v-if="settings.webcamUrl.length > 0"
+                    v-if="settings.webcamUrl"
                     loading="lazy"
                     :src="settings.webcamUrl"
                   />
@@ -217,13 +217,40 @@
                 </div>
 
                 <div>
-                  <input
-                    placeholder="Web camera url"
-                    title="Web camera url"
-                    spellcheck="false"
-                    v-model="settings.webcamUrl"
-                  />
-                  <button class="pseudo" @click="saveSettings()">Save</button>
+                  <div class="flex three">
+                    <div>WebCam Url</div>
+                    <div class="full two-third-1000">
+                      <input
+                        placeholder="Web camera url"
+                        title="Web camera url"
+                        spellcheck="false"
+                        v-model="settings.webcamUrl"
+                      />
+                    </div>
+
+                    <div>MQTT IP Address</div>
+                    <div class="full two-third-1000">
+                      <input
+                        placeholder="MQTT Server"
+                        title="MQTT Server"
+                        spellcheck="false"
+                        v-model="settings.mqttServer"
+                      />
+                    </div>
+
+                    <div>Config Location</div>
+                    <div class="full two-third-1000">
+                      <select v-model="settings.locationType">
+                        <option disabled value="Default">Default</option>
+                        <option value="CurrentDirectory">
+                          Current Directory
+                        </option>
+                        <option value="UserDirectory">User Directory</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button @click="saveSettings()">Save</button>
                   <hr />
                   <a href="doc.html" target="_blank">docs</a>
                 </div>
