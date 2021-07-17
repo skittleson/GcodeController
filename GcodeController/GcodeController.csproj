@@ -44,17 +44,17 @@
 
   <ItemGroup>
     <PackageReference Include="EmbedIO" Version="3.4.3" />
-    <PackageReference Include="M2MqttDotnetCore" Version="1.1.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
-    <PackageReference Include="HttpMultipartParser" Version="5.0.0" />
-    <PackageReference Include="Easy.Common" Version="3.8.7" />
+    <PackageReference Include="HttpMultipartParser" Version="5.0.1" />
+    <PackageReference Include="Easy.Common" Version="3.8.9" />
     <PackageReference Include="Microsoft.OpenApi" Version="1.2.3" />
     <PackageReference Include="Microsoft.OpenApi.Readers" Version="1.2.3" />
+    <PackageReference Include="MQTTnet" Version="3.0.16" />
     <PackageReference Include="PubSub" Version="4.0.1" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
     <PackageReference Include="System.IO.Ports" Version="5.0.1" />

@@ -10,13 +10,14 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace GcodeController {
 
     public interface IEmbededWebServer : IDisposable {
-        Task Start(ServiceProvider serviceProvider);
+        Task StartAsync(ServiceProvider serviceProvider);
     }
 
     public class EmbededWebServer : IEmbededWebServer {
@@ -31,7 +32,7 @@ namespace GcodeController {
             _cancellationToken = cancellationToken;
         }
 
-        public Task Start(ServiceProvider serviceProvider) {
+        public Task StartAsync(ServiceProvider serviceProvider) {
             IServiceScope scopeFactory() {
                 return serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
             }
@@ -48,6 +49,8 @@ namespace GcodeController {
                 .WithWebApi($"/api/{CommandHandler.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new CommandApiController(scopeFactory())))
                 .WithWebApi($"/api/{ConfigurationApiController.PREFIX}", CustomResponseSerializer.None(false), m => m.WithController(() => new ConfigurationApiController(scopeFactory())))
                 .WithEmbeddedResources("/", assembly, "GcodeController.web");
+
+            //TODO this doesnt always work!
             var ipv4Address = Dns
                 .GetHostAddresses(Dns.GetHostName())
                 .Select(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
@@ -89,7 +92,7 @@ namespace GcodeController {
                 if (!context.TryDetermineCompression(context.Response.ContentType, out var preferCompression)) {
                     preferCompression = true;
                 }
-                var responseString = System.Text.Json.JsonSerializer.Serialize(data, Utils.JsonOptions());
+                var responseString = JsonSerializer.Serialize(data, Utils.JsonOptions());
                 context.Response.ContentType = "application/json; charset=utf-8";
                 using var text = context.OpenResponseText(context.Response.ContentEncoding, bufferResponse, preferCompression);
                 await text.WriteAsync(responseString).ConfigureAwait(false);

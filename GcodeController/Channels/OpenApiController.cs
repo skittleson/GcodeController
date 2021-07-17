@@ -39,7 +39,8 @@ namespace GcodeController.Channels {
                 typeof(SerialApiController),
                 typeof(JobsApiController),
                 typeof(FilesApiController),
-                typeof(CommandApiController)
+                typeof(CommandApiController),
+                typeof(ConfigurationApiController)
             };
             var doc = new OpenApiDocument {
                 Info = new OpenApiInfo {

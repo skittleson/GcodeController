@@ -1,5 +1,6 @@
 ﻿using GcodeController.Channels;
 using GcodeController.Handlers;
+using GcodeController.Models;
 using GcodeController.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 namespace GcodeController {
     internal class Program {
 
-        private static void Main(string[] args) {
+        private static async Task Main(string[] args) {
             var ct = new CancellationTokenSource();
             var serviceProvider = new ServiceCollection()
                .AddLogging(configure => {
@@ -34,12 +35,12 @@ namespace GcodeController {
                 ct.Cancel();
                 serviceProvider.GetService<IDeviceService>().Close();
             };
+            var config = serviceProvider.GetService<AppConfig>();
+            if (config is not null && config.MqttServer.Length > 0) {
+                await serviceProvider.GetService<MqttChannel>().ConnectAsync(config.MqttServer);
+            }
 
-            // Move connect when on configuration mqtt ip address is added.
-            //serviceProvider.GetService<MqttChannel>().Connect(System.Net.IPAddress.Parse("127.0.0.1"));
-            Task.Run(async () => {
-                await serviceProvider.GetService<IEmbededWebServer>().Start(serviceProvider);
-            }, ct.Token);
+            await serviceProvider.GetService<IEmbededWebServer>().StartAsync(serviceProvider);
             Console.WriteLine("Press any key to exit");
             Console.ReadKey(true);
             serviceProvider.Dispose();

@@ -15,5 +15,9 @@ namespace GcodeController.Channels {
             return System.Text.Json.JsonSerializer.Serialize(this, Utils.JsonOptions());
         }
         public byte[] ToBytes() => Encoding.UTF8.GetBytes(ToString());
+
+        public static EventResponse<T> New(T data) => new EventResponse<T>(data);
+        public static string Payload(T data) => (new EventResponse<T>(data)).ToString();
+
     }
 }

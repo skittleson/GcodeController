@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using GcodeController.Handlers;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 namespace GcodeController.Services {
 
     public interface IDeviceService {
-        Task<bool> OpenAsync(string port, int baudRate);
+        Task<SerialResponse> OpenAsync(string port, int baudRate);
         void Close();
         Task<Guid> WriteAsync(string command, bool responseRequired = false);
         string PortName {
@@ -33,9 +34,12 @@ namespace GcodeController.Services {
     public class DeviceService : IDeviceService, IDisposable {
         private SerialPort _serialPort;
         private readonly ILogger<DeviceService> _logger;
+        private IEventHubService _hubService;
         public string PortName => _serialPort?.PortName ?? string.Empty;
         public int BaudRate => _serialPort?.BaudRate ?? 0;
         public bool IsOpen => _serialPort?.IsOpen ?? false;
+
+        // TODO remove channels for event hub service
         public Channel<KeyValuePair<Guid, string>> RequestChannel {
             get; private set;
         }
@@ -43,12 +47,14 @@ namespace GcodeController.Services {
             get;
         }
 
+
         private Guid _statusId = new Guid("79bbad7a-3f92-4ea8-ad3a-84cfc4ce1d7a");
 
-        public DeviceService(ILoggerFactory loggerFactory) {
+        public DeviceService(ILoggerFactory loggerFactory, IEventHubService hubService) {
             _logger = loggerFactory.CreateLogger<DeviceService>();
             RequestChannel = Channel.CreateBounded<KeyValuePair<Guid, string>>(1);
             ResponseCache = new MemoryCache(new MemoryCacheOptions());
+            _hubService = hubService;
             Background();
         }
 
@@ -62,9 +68,13 @@ namespace GcodeController.Services {
 
         public string[] GetPorts() => SerialPort.GetPortNames();
 
-        public async Task<bool> OpenAsync(string port, int baudRate) {
+        public async Task<SerialResponse> OpenAsync(string port, int baudRate) {
             Close();
             _serialPort = new SerialPort(port, baudRate);
+            var response = new SerialResponse {
+                BaudRate = baudRate,
+                Port = port
+            };
             try {
                 _serialPort.ReadTimeout = 10000;
                 _serialPort.WriteTimeout = 10000;
@@ -74,11 +84,13 @@ namespace GcodeController.Services {
                 // Wake up!
                 await WriteAsync("\n");
                 _logger.LogInformation($"Connected {port} @ {baudRate}");
+                response.IsOpen = true;
             } catch {
                 _logger.LogWarning($"Unable to open port {port} @ {baudRate}");
-                return false;
+                return response;
             }
-            return _serialPort?.IsOpen ?? false;
+            _hubService.Publish(response);
+            return response;
         }
 
         public void Dispose() {
